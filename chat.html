@@ -308,7 +308,7 @@ function addAI(html) {
   return bbl;
 }
 
-// 공감멘트 타이핑 → 카드 fadeIn → 추천칩 fadeIn
+// 공감멘트 타이핑 → 카드 구조 fadeIn → summary 타이핑 → 링크/추천칩 fadeIn
 function addAIResult(empathy, cardsHtml, faqId) {
   var r = document.createElement('div');
   r.className = 'brow';
@@ -319,6 +319,7 @@ function addAIResult(empathy, cardsHtml, faqId) {
   chat.appendChild(r);
   scrollB();
 
+  // 1단계: 공감멘트 타이핑
   var i = 0;
   var cursor = document.createElement('span');
   cursor.className = 'cursor';
@@ -328,21 +329,92 @@ function addAIResult(empathy, cardsHtml, faqId) {
     if (i >= empathy.length) {
       clearInterval(t);
       cursor.remove();
-      if (cardsHtml) {
-        var cw = document.createElement('div');
-        cw.className = 'fadein';
-        cw.innerHTML = cardsHtml;
-        bbl.appendChild(cw);
+
+      if (!cardsHtml) {
+        // 카드 없을 때 (fallback)
+        if (faqId && REL[faqId]) {
+          var sw = document.createElement('div');
+          sw.className = 'fadein';
+          sw.innerHTML = makeSugHtml(faqId);
+          bbl.appendChild(sw);
+          setTimeout(function() { sw.classList.add('show'); scrollB(); }, 300);
+        }
+        return;
+      }
+
+      // 2단계: 카드 구조만 먼저 fadeIn (summary는 비워둠)
+      var tmp = document.createElement('div');
+      tmp.innerHTML = cardsHtml;
+
+      // fsum 찾아서 텍스트 추출 후 비워두기
+      var fsumEl = tmp.querySelector('.fsum');
+      var summaryText = fsumEl ? (fsumEl.textContent || '') : '';
+      if (fsumEl) fsumEl.textContent = '';
+
+      // flink, scard는 숨겨두기
+      var flinkEl = tmp.querySelector('.flink');
+      var scardEl = tmp.querySelector('.scard');
+      if (flinkEl) flinkEl.style.opacity = '0';
+      if (scardEl) scardEl.style.opacity = '0';
+
+      var cw = document.createElement('div');
+      cw.className = 'fadein';
+      cw.appendChild(tmp.firstChild || tmp);
+      bbl.appendChild(cw);
+      scrollB();
+
+      setTimeout(function() {
+        cw.classList.add('show');
         scrollB();
-        setTimeout(function() { cw.classList.add('show'); scrollB(); }, 50);
-      }
-      if (faqId && REL[faqId]) {
-        var sw = document.createElement('div');
-        sw.className = 'fadein';
-        sw.innerHTML = makeSugHtml(faqId);
-        bbl.appendChild(sw);
-        setTimeout(function() { sw.classList.add('show'); scrollB(); }, 400);
-      }
+
+        // 3단계: summary 타이핑
+        if (fsumEl && summaryText) {
+          var si = 0;
+          var scursor = document.createElement('span');
+          scursor.className = 'cursor';
+          fsumEl.appendChild(scursor);
+
+          var st = setInterval(function() {
+            if (si >= summaryText.length) {
+              clearInterval(st);
+              scursor.remove();
+
+              // 4단계: 링크/담당자 fadeIn
+              if (flinkEl) {
+                flinkEl.style.transition = 'opacity .4s ease';
+                setTimeout(function() { flinkEl.style.opacity = '1'; scrollB(); }, 100);
+              }
+              if (scardEl) {
+                scardEl.style.transition = 'opacity .4s ease';
+                setTimeout(function() { scardEl.style.opacity = '1'; scrollB(); }, 200);
+              }
+
+              // 5단계: 추천칩 fadeIn
+              if (faqId && REL[faqId]) {
+                var sw = document.createElement('div');
+                sw.className = 'fadein';
+                sw.innerHTML = makeSugHtml(faqId);
+                bbl.appendChild(sw);
+                setTimeout(function() { sw.classList.add('show'); scrollB(); }, 400);
+              }
+              return;
+            }
+            fsumEl.insertBefore(document.createTextNode(summaryText[si++]), scursor);
+            scrollB();
+          }, 28);
+        } else {
+          // summary 없으면 바로 링크/추천칩
+          if (flinkEl) { flinkEl.style.transition='opacity .4s'; setTimeout(function(){flinkEl.style.opacity='1';},100); }
+          if (scardEl) { scardEl.style.transition='opacity .4s'; setTimeout(function(){scardEl.style.opacity='1';},200); }
+          if (faqId && REL[faqId]) {
+            var sw2 = document.createElement('div');
+            sw2.className = 'fadein';
+            sw2.innerHTML = makeSugHtml(faqId);
+            bbl.appendChild(sw2);
+            setTimeout(function() { sw2.classList.add('show'); scrollB(); }, 400);
+          }
+        }
+      }, 80);
       return;
     }
     bbl.insertBefore(document.createTextNode(empathy[i++]), cursor);
@@ -358,7 +430,7 @@ function makeSugHtml(faqId) {
     var label = FAQ_Q[id] || id;
     chips += '<button class="sug-btn" data-faqid="' + id + '">' + esc(label) + '</button>';
   });
-  return '<div class="sug-wrap"><div class="sug-label">💡 이런 것도 궁금하지 않으세요?</div><div class="sug-row">' + chips + '</div></div>';
+  return '<div class="sug-wrap"><div class="sug-label">🤖 AI가 연관 내용을 찾았어요</div><div class="sug-row">' + chips + '</div></div>';
 }
 
 // 이벤트 위임
