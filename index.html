@@ -1,74 +1,74 @@
-link href=httpsfonts.googleapis.comcss2family=Noto+Sans+KRwght@400;500;700;900&amp;display=swap rel=stylesheet
-style
-{box-sizingborder-box;margin0;padding0}
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
 .fp{
-  font-family'Noto Sans KR',sans-serif;
-  background#fff;
-  border-radius20px;
-  padding28px 24px 24px;
-  box-shadow0 4px 24px rgba(7,33,58,.10);
-  max-width320px;
-  margin0 auto;
-  text-aligncenter;
+  font-family:'Noto Sans KR',sans-serif;
+  background:#fff;
+  border-radius:20px;
+  padding:28px 24px 24px;
+  box-shadow:0 4px 24px rgba(7,33,58,.10);
+  max-width:320px;
+  margin:0 auto;
+  text-align:center;
 }
 .fp-img{
-  width88px;height88px;object-fitcontain;
-  margin-bottom14px;
-  filterdrop-shadow(0 6px 16px rgba(0,207,192,.28));
+  width:88px;height:88px;object-fit:contain;
+  margin-bottom:14px;
+  filter:drop-shadow(0 6px 16px rgba(0,207,192,.28));
 }
 .fp-title{
-  font-size20px;font-weight900;
-  color#07213a;letter-spacing-.02em;
-  margin-bottom6px;
+  font-size:20px;font-weight:900;
+  color:#07213a;letter-spacing:-.02em;
+  margin-bottom:6px;
 }
 .fp-desc{
-  font-size13.5px;color#7a9ab8;
-  line-height1.65;margin-bottom22px;
+  font-size:13.5px;color:#7a9ab8;
+  line-height:1.65;margin-bottom:22px;
 }
 .fp-input{
-  width100%;padding14px 16px;
-  border2px solid #e8eef8;
-  border-radius14px;
-  font-family'Noto Sans KR',sans-serif;
-  font-size15px;color#07213a;
-  background#f7f9ff;outlinenone;
-  text-aligncenter;
-  transitionborder-color .15s,box-shadow .15s;
-  margin-bottom14px;
+  width:100%;padding:14px 16px;
+  border:2px solid #e8eef8;
+  border-radius:14px;
+  font-family:'Noto Sans KR',sans-serif;
+  font-size:15px;color:#07213a;
+  background:#f7f9ff;outline:none;
+  text-align:center;
+  transition:border-color .15s,box-shadow .15s;
+  margin-bottom:14px;
 }
-.fp-inputfocus{
-  border-color#00cfc0;
-  box-shadow0 0 0 4px rgba(0,207,192,.1);
-  background#fff;
+.fp-input:focus{
+  border-color:#00cfc0;
+  box-shadow:0 0 0 4px rgba(0,207,192,.1);
+  background:#fff;
 }
-.fp-inputplaceholder{color#b0bdd0;font-size14px}
+.fp-input::placeholder{color:#b0bdd0;font-size:14px}
 .fp-btn{
-  displayinline-flex;align-itemscenter;justify-contentcenter;gap6px;
-  padding13px 28px;
-  backgroundlinear-gradient(135deg,#00c4b4,#0075d8);
-  color#fff;bordernone;border-radius50px;
-  font-family'Noto Sans KR',sans-serif;
-  font-size15px;font-weight700;
-  cursorpointer;
-  box-shadow0 4px 16px rgba(0,160,200,.3);
-  transitiontransform .12s,box-shadow .12s;
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:13px 28px;
+  background:linear-gradient(135deg,#00c4b4,#0075d8);
+  color:#fff;border:none;border-radius:50px;
+  font-family:'Noto Sans KR',sans-serif;
+  font-size:15px;font-weight:700;
+  cursor:pointer;
+  box-shadow:0 4px 16px rgba(0,160,200,.3);
+  transition:transform .12s,box-shadow .12s;
 }
-.fp-btnhover{transformscale(1.04);box-shadow0 6px 20px rgba(0,160,200,.38)}
-.fp-btnactive{transformscale(.97)}
+.fp-btn:hover{transform:scale(1.04);box-shadow:0 6px 20px rgba(0,160,200,.38)}
+.fp-btn:active{transform:scale(.97)}
 .fp-hint{
-  margin-top10px;
-  font-size11.5px;color#b0bdd0;
+  margin-top:10px;
+  font-size:11.5px;color:#b0bdd0;
 }
-style
+</style>
 
-div class=fp
-  img class=fp-img src=httpsjnlib.github.iofindmascot.png alt=
-  div class=fp-title담당자 찾기div
-  div class=fp-desc업무 키워드를 입력하면brAI가 담당자를 찾아드려요 🔍div
-  form action=httpsfindjnlib.hdh1231.workers.devfind-staff method=POST target=_blank
-    input class=fp-input name=question placeholder=희망도서, 연체료, 냉난방...
-    br
-    button class=fp-btn type=submit✨ 담당자 찾기button
-  form
-  div class=fp-hint키워드나 문장 모두 OKdiv
-div
+<div class="fp">
+  <img class="fp-img" src="https://jnlib.github.io/find/mascot.png" alt="">
+  <div class="fp-title">담당자 찾기</div>
+  <div class="fp-desc">업무 키워드를 입력하면<br>AI가 담당자를 찾아드려요 🔍</div>
+  <form action="https://findjnlib.hdh1231.workers.dev/find-staff" method="POST" target="_blank">
+    <input class="fp-input" name="question" placeholder="희망도서, 연체료, 냉난방...">
+    <br>
+    <button class="fp-btn" type="submit">✨ 담당자 찾기</button>
+  </form>
+  <div class="fp-hint">키워드나 문장 모두 OK</div>
+</div>
