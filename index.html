@@ -22,8 +22,8 @@
   margin-bottom:6px;
 }
 .fp-desc{
-  font-size:13.5px;color:#7a9ab8;
-  line-height:1.65;margin-bottom:22px;
+  font-size:13px;color:#7a9ab8;
+  line-height:1.7;margin-bottom:22px;
 }
 .fp-input{
   width:100%;padding:14px 16px;
@@ -41,7 +41,7 @@
   box-shadow:0 0 0 4px rgba(0,207,192,.1);
   background:#fff;
 }
-.fp-input::placeholder{color:#b0bdd0;font-size:14px}
+.fp-input::placeholder{color:#b0bdd0;font-size:13.5px}
 .fp-btn{
   display:inline-flex;align-items:center;justify-content:center;gap:6px;
   padding:13px 28px;
@@ -55,20 +55,42 @@
 }
 .fp-btn:hover{transform:scale(1.04);box-shadow:0 6px 20px rgba(0,160,200,.38)}
 .fp-btn:active{transform:scale(.97)}
-.fp-hint{
-  margin-top:10px;
-  font-size:11.5px;color:#b0bdd0;
+.fp-divider{
+  display:flex;align-items:center;gap:10px;
+  margin:18px 0 12px;
+}
+.fp-divider::before,.fp-divider::after{
+  content:'';flex:1;height:1px;background:#eef1f8;
+}
+.fp-divider span{font-size:11px;color:#c8d0e0;white-space:nowrap}
+.fp-tags{
+  display:flex;flex-wrap:wrap;justify-content:center;gap:6px;
+}
+.fp-tag{
+  padding:4px 11px;
+  background:#f4f7fd;
+  border:1px solid #e4eaf6;
+  border-radius:20px;
+  font-size:11.5px;color:#6a80a8;
 }
 </style>
 
 <div class="fp">
   <img class="fp-img" src="https://jnlib.github.io/find/mascot.png" alt="">
-  <div class="fp-title">담당자 찾기</div>
-  <div class="fp-desc">업무 키워드를 입력하면<br>AI가 담당자를 찾아드려요 🔍</div>
-  <form action="https://findjnlib.hdh1231.workers.dev/find-staff" method="POST" target="_blank">
-    <input class="fp-input" name="question" placeholder="희망도서, 연체료, 냉난방...">
+  <div class="fp-title">무엇이든 물어보세요</div>
+  <div class="fp-desc">담당자 안내부터 도서관 이용 정보까지<br>AI가 한 번에 찾아드려요</div>
+  <form action="https://findjnlib.hdh1231.workers.dev/search" method="POST" target="_blank">
+    <input class="fp-input" name="question" placeholder="예) 책 반납이 늦었는데 어떻게 하나요?">
     <br>
-    <button class="fp-btn" type="submit">✨ 담당자 찾기</button>
+    <button class="fp-btn" type="submit">✨ AI에게 물어보기</button>
   </form>
-  <div class="fp-hint">키워드나 문장 모두 OK</div>
+  <div class="fp-divider"><span>이런 것도 물어보세요</span></div>
+  <div class="fp-tags">
+    <span class="fp-tag">희망도서 신청</span>
+    <span class="fp-tag">연체료 문의</span>
+    <span class="fp-tag">회원증 발급</span>
+    <span class="fp-tag">문화강좌 등록</span>
+    <span class="fp-tag">냉난방 불편</span>
+    <span class="fp-tag">고문헌 열람</span>
+  </div>
 </div>
