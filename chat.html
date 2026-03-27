@@ -29,7 +29,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:linear-gradient(160deg,#ee
 .bav{width:32px;height:32px;border-radius:50%;flex-shrink:0;background:rgba(0,207,192,.08);border:1.5px solid rgba(0,207,192,.15);display:flex;align-items:center;justify-content:center;overflow:hidden}
 .bav img{width:24px;height:24px;object-fit:contain}
 .bav.u{background:linear-gradient(135deg,#07213a,#0a3060);font-size:.78em;color:rgba(255,255,255,.85);font-weight:700}
-.bbl{max-width:86%;padding:13px 16px;border-radius:18px;font-size:.95em;line-height:1.8;color:var(--navy);animation:popIn .35s cubic-bezier(.22,.68,0,1.2)}
+.bbl{max-width:86%;padding:13px 16px;border-radius:18px;font-size:1em;line-height:1.8;color:var(--navy);animation:popIn .35s cubic-bezier(.22,.68,0,1.2)}
 @keyframes popIn{from{opacity:0;transform:scale(.9) translateY(10px)}to{opacity:1;transform:none}}
 .bbl.ai{background:#fff;border:1px solid rgba(0,207,192,.15);border-bottom-left-radius:5px;box-shadow:0 3px 16px rgba(7,33,58,.07)}
 .bbl.usr{background:linear-gradient(135deg,#00c4b4,#0060d0);color:#fff;border-bottom-right-radius:5px}
@@ -37,8 +37,8 @@ body{font-family:'Noto Sans KR',sans-serif;background:linear-gradient(160deg,#ee
 .fbar{height:3px;background:linear-gradient(90deg,var(--blue),var(--teal))}
 .fbody{padding:14px 16px}
 .flbl{font-size:.68em;color:var(--muted);font-weight:700;letter-spacing:.08em;margin-bottom:6px}
-.ftitle{font-size:.97em;font-weight:900;color:var(--navy);margin-bottom:8px}
-.fsum{font-size:.88em;color:#2a4a68;line-height:1.85}
+.ftitle{font-size:1.02em;font-weight:900;color:var(--navy);margin-bottom:8px}
+.fsum{font-size:.93em;color:#2a4a68;line-height:1.9}
 .flink{display:inline-flex;align-items:center;gap:6px;margin-top:11px;padding:8px 18px;background:linear-gradient(135deg,#0075d8,#00a898);color:#fff;border-radius:50px;font-size:.8em;font-weight:700;text-decoration:none;box-shadow:0 3px 12px rgba(0,150,200,.28)}
 .scard{background:#fff;border:1.5px solid rgba(0,207,192,.2);border-radius:12px;overflow:hidden;margin-top:10px}
 .sbar{height:3px;background:linear-gradient(90deg,var(--teal),var(--blue))}
@@ -72,11 +72,11 @@ body{font-family:'Noto Sans KR',sans-serif;background:linear-gradient(160deg,#ee
 .sug-wrap{margin-top:10px}
 .sug-label{font-size:.68em;color:var(--muted);margin-bottom:7px;font-weight:700}
 .sug-row{display:flex;flex-wrap:wrap;gap:6px}
-.sug-btn{padding:7px 13px;background:rgba(49,130,255,.06);border:1.5px solid rgba(49,130,255,.18);border-radius:50px;font-size:.78em;color:var(--blue);cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:all .15s;text-align:left}
+.sug-btn{padding:8px 14px;background:rgba(49,130,255,.06);border:1.5px solid rgba(49,130,255,.18);border-radius:50px;font-size:.85em;color:var(--blue);cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:all .15s;text-align:left}
 .sug-btn:hover{background:rgba(49,130,255,.12);transform:scale(1.02)}
 .iarea{flex-shrink:0;padding:10px 14px 14px;background:rgba(255,255,255,.97);border-top:1px solid rgba(0,207,192,.1)}
 .irow{display:flex;gap:8px;align-items:flex-end}
-.ibox{flex:1;padding:12px 15px;border:2px solid rgba(0,207,192,.2);border-radius:14px;font-family:'Noto Sans KR',sans-serif;font-size:.95em;color:var(--navy);background:#f8fbff;outline:none;resize:none;max-height:100px;transition:border-color .15s,box-shadow .15s;line-height:1.5}
+.ibox{flex:1;padding:12px 15px;border:2px solid rgba(0,207,192,.2);border-radius:14px;font-family:'Noto Sans KR',sans-serif;font-size:1em;color:var(--navy);background:#f8fbff;outline:none;resize:none;max-height:100px;transition:border-color .15s,box-shadow .15s;line-height:1.5}
 .ibox:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,207,192,.1);background:#fff}
 .ibox::placeholder{color:rgba(7,33,58,.28)}
 .sbtn{width:44px;height:44px;flex-shrink:0;border:none;border-radius:12px;cursor:pointer;background:linear-gradient(135deg,#00c4b4,#0060d0);color:#fff;font-size:1.15em;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 14px rgba(0,150,200,.32);transition:transform .12s}
@@ -164,12 +164,10 @@ var REL = {
 
 // 예시질문
 var EXAMPLES = [
-  {t:'📚 도서관에 없는 책 구입 신청하고 싶어요', id:'q012'},
-  {t:'😰 책 반납이 늦었는데 연체료 어떻게 되나요?', id:'q060'},
-  {t:'🕐 도서관 몇 시에 문 닫아요?', id:'q056'},
-  {t:'🚇 도서관 어떻게 가나요?', id:'q065'},
-  {t:'📖 집에서 전자책 이용하고 싶어요', id:'q013'},
-  {t:'👴 어르신 책 택배로 받을 수 있나요?', id:'q061'},
+  {t:'📚 읽고 싶은 책이 있는데 도서관에 없어요', id:'q012'},
+  {t:'😰 책을 늦게 반납했는데 연체료가 너무 걱정돼요', id:'q060'},
+  {t:'🎓 도서관에서 배울 수 있는 강좌가 있나요?', id:'q032'},
+  {t:'👴 65세 어르신인데 집에서 책 받아볼 수 있나요?', id:'q061'},
 ];
 
 window.addEventListener('DOMContentLoaded', function() {
@@ -198,7 +196,7 @@ function showExamples() {
   EXAMPLES.forEach(function(e) {
     var btn = document.createElement('button');
     btn.className = 'sug-btn';
-    btn.style.fontSize = '.82em';
+    btn.style.fontSize = '.9em';
     btn.textContent = e.t;
     btn.onclick = function() {
       addUser(e.t);
