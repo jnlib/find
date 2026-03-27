@@ -69,6 +69,11 @@ body{font-family:'Noto Sans KR',sans-serif;background:linear-gradient(160deg,#ee
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
 .fadein{opacity:0;transition:opacity .5s ease}
 .fadein.show{opacity:1}
+.sug-wrap{margin-top:10px}
+.sug-label{font-size:.68em;color:var(--muted);margin-bottom:7px;font-weight:700}
+.sug-row{display:flex;flex-wrap:wrap;gap:6px}
+.sug-btn{padding:7px 13px;background:rgba(49,130,255,.06);border:1.5px solid rgba(49,130,255,.18);border-radius:50px;font-size:.78em;color:var(--blue);cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:all .15s;text-align:left}
+.sug-btn:hover{background:rgba(49,130,255,.12);transform:scale(1.02)}
 .iarea{flex-shrink:0;padding:10px 14px 14px;background:rgba(255,255,255,.97);border-top:1px solid rgba(0,207,192,.1)}
 .irow{display:flex;gap:8px;align-items:flex-end}
 .ibox{flex:1;padding:12px 15px;border:2px solid rgba(0,207,192,.2);border-radius:14px;font-family:'Noto Sans KR',sans-serif;font-size:.95em;color:var(--navy);background:#f8fbff;outline:none;resize:none;max-height:100px;transition:border-color .15s,box-shadow .15s;line-height:1.5}
@@ -100,178 +105,335 @@ body{font-family:'Noto Sans KR',sans-serif;background:linear-gradient(160deg,#ee
   </div>
 </div>
 <script>
-var W='https://findjnlib.hdh1231.workers.dev/search';
-var M='https://jnlib.github.io/find/mascot.png';
-var chat=document.getElementById('chat');
-var ibox=document.getElementById('ibox');
-var sbtn=document.getElementById('sbtn');
-var MSGS=['질문을 분석하고 있어요','담당자를 찾고 있어요','관련 정보를 확인하고 있어요','거의 다 됐어요'];
-var EMPATHY=[
-  {k:['연체','벌금','연체료'],m:'많이 당황하셨겠어요 😅 걱정 마세요!'},
-  {k:['희망도서','원하는책','사고싶'],m:'읽고 싶은 책이 있으시군요 📚'},
-  {k:['회원','가입','회원증'],m:'도서관 이용을 시작하시려는군요! 환영해요 😊'},
-  {k:['냉난방','춥','덥','온도'],m:'불편하셨겠어요 😥 빠르게 안내드릴게요!'},
-  {k:['고문헌','고서','옛날책'],m:'귀한 자료에 관심 가져주셔서 감사해요 📜'},
-  {k:['철학','인왕관'],m:'깊이 있는 탐구를 원하시는군요 🤔'},
-  {k:['장애인','택배','배달'],m:'편리하게 이용하실 수 있도록 도와드릴게요!'},
-  {k:['어르신','노인','할머니','할아버지'],m:'어르신을 위한 서비스를 안내드릴게요 😊'},
-  {k:['프로그램','강좌','신청'],m:'도서관 프로그램에 관심 가져주셔서 감사해요!'},
+var W = 'https://findjnlib.hdh1231.workers.dev/search';
+var M = 'https://jnlib.github.io/find/mascot.png';
+var chat = document.getElementById('chat');
+var ibox = document.getElementById('ibox');
+var sbtn = document.getElementById('sbtn');
+var MSGS = ['질문을 분석하고 있어요','담당자를 찾고 있어요','관련 정보를 확인하고 있어요','거의 다 됐어요'];
+
+// 청크 캐시
+var CACHE = {};
+
+// 공감 멘트
+var EMPATHY = [
+  {k:['연체','벌금','연체료'], m:'많이 당황하셨겠어요 😅 걱정 마세요!'},
+  {k:['희망도서','원하는책','사고싶'], m:'읽고 싶은 책이 있으시군요 📚'},
+  {k:['회원','가입','회원증'], m:'도서관 이용을 시작하시려는군요! 환영해요 😊'},
+  {k:['냉난방','춥','덥','온도'], m:'불편하셨겠어요 😥 빠르게 안내드릴게요!'},
+  {k:['고문헌','고서','옛날책'], m:'귀한 자료에 관심 가져주셔서 감사해요 📜'},
+  {k:['철학','인왕관'], m:'깊이 있는 탐구를 원하시는군요 🤔'},
+  {k:['장애인','택배','배달'], m:'편리하게 이용하실 수 있도록 도와드릴게요!'},
+  {k:['어르신','노인','할머니','할아버지'], m:'어르신을 위한 서비스를 안내드릴게요 😊'},
+  {k:['프로그램','강좌','신청'], m:'도서관 프로그램에 관심 가져주셔서 감사해요!'},
 ];
-function getEmpathy(q){
-  for(var i=0;i<EMPATHY.length;i++)
-    for(var j=0;j<EMPATHY[i].k.length;j++)
-      if(q.indexOf(EMPATHY[i].k[j])>-1) return EMPATHY[i].m;
+function getEmpathy(q) {
+  for (var i = 0; i < EMPATHY.length; i++)
+    for (var j = 0; j < EMPATHY[i].k.length; j++)
+      if (q.indexOf(EMPATHY[i].k[j]) > -1) return EMPATHY[i].m;
   return '도와드릴게요! 😊';
 }
 
-window.addEventListener('DOMContentLoaded',function(){
-  var q=new URLSearchParams(window.location.search).get('q')||'';
-  if(q){addUser(q);doSearch(q);}
-  else{addAI('<span style="color:var(--muted)">안녕하세요! 😊<br>도서관 이용 관련 무엇이든 편하게 물어보세요.</span>');}
+// FAQ 관계맵
+var REL = {
+  'q001':['q003','q007','q012'],'q002':['q001','q063','q008'],'q003':['q001','q020','q023'],
+  'q004':['q059','q056','q065'],'q005':['q004','q001','q059'],'q006':['q004','q012','q005'],
+  'q007':['q001','q059','q003'],'q008':['q001','q010','q059'],'q009':['q016','q055','q026'],
+  'q010':['q008','q059','q011'],'q011':['q010','q012','q059'],'q012':['q059','q001','q007'],
+  'q013':['q015','q018','q059'],'q014':['q013','q018','q019'],'q015':['q019','q013','q018'],
+  'q016':['q009','q055','q026'],'q017':['q013','q016','q018'],'q018':['q013','q017','q015'],
+  'q019':['q015','q014','q064'],'q020':['q021','q022','q003'],'q021':['q020','q022','q023'],
+  'q022':['q020','q021','q025'],'q023':['q020','q003','q027'],'q024':['q010','q008','q023'],
+  'q025':['q035','q022','q052'],'q026':['q009','q016','q055'],'q027':['q008','q023','q020'],
+  'q028':['q037','q020','q032'],'q029':['q042','q055','q016'],'q030':['q037','q064','q043'],
+  'q031':['q032','q037','q065'],'q032':['q034','q036','q033'],'q033':['q032','q036','q049'],
+  'q034':['q032','q036','q052'],'q035':['q025','q052','q032'],'q036':['q032','q034','q033'],
+  'q037':['q032','q028','q039'],'q038':['q059','q056','q057'],'q039':['q038','q037','q048'],
+  'q040':['q032','q036','q037'],'q041':['q042','q043','q065'],'q042':['q029','q041','q055'],
+  'q043':['q041','q044','q003'],'q044':['q001','q043','q007'],'q045':['q059','q001','q057'],
+  'q046':['q061','q059','q057'],'q047':['q057','q059','q045'],'q048':['q001','q003','q012'],
+  'q049':['q033','q050','q032'],'q050':['q032','q033','q049'],'q051':['q025','q052','q032'],
+  'q052':['q034','q036','q025'],'q053':['q054','q055','q016'],'q054':['q053','q055','q017'],
+  'q055':['q054','q016','q009'],'q056':['q058','q065','q059'],'q057':['q059','q066','q067'],
+  'q058':['q056','q065','q062'],'q059':['q060','q045','q004'],'q060':['q059','q069','q064'],
+  'q061':['q046','q057','q059'],'q062':['q058','q070','q056'],'q063':['q058','q001','q008'],
+  'q064':['q060','q059','q038'],'q065':['q056','q058','q004'],'q066':['q057','q067','q059'],
+  'q067':['q057','q066','q059'],'q068':['q063','q058','q001'],'q069':['q060','q059','q064'],
+  'q070':['q062','q058','q014']
+};
+
+// 예시질문
+var EXAMPLES = [
+  {t:'📚 도서관에 없는 책 구입 신청하고 싶어요', id:'q012'},
+  {t:'😰 책 반납이 늦었는데 연체료 어떻게 되나요?', id:'q060'},
+  {t:'🕐 도서관 몇 시에 문 닫아요?', id:'q056'},
+  {t:'🚇 도서관 어떻게 가나요?', id:'q065'},
+  {t:'📖 집에서 전자책 이용하고 싶어요', id:'q013'},
+  {t:'👴 어르신 책 택배로 받을 수 있나요?', id:'q061'},
+];
+
+window.addEventListener('DOMContentLoaded', function() {
+  var q = new URLSearchParams(window.location.search).get('q') || '';
+  if (q) {
+    addUser(q);
+    doSearch(q);
+  } else {
+    addAI('<span style="color:var(--muted)">안녕하세요! 😊<br>도서관 이용 관련 무엇이든 편하게 물어보세요.</span>');
+    showExamples();
+  }
   ibox.focus();
 });
 
-function hKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}}
-function aResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,100)+'px';}
-function scrollB(){setTimeout(function(){chat.scrollTop=chat.scrollHeight;},50);}
-
-function addUser(txt){
-  var r=document.createElement('div');r.className='brow usr';
-  r.innerHTML='<div class="bav u">나</div><div class="bbl usr">'+esc(txt)+'</div>';
-  chat.appendChild(r);scrollB();
-}
-
-function addAI(html){
-  var r=document.createElement('div');r.className='brow';
-  var bbl=document.createElement('div');bbl.className='bbl ai';
-  r.innerHTML='<div class="bav"><img src="'+M+'" alt=""></div>';
+function showExamples() {
+  var r = document.createElement('div');
+  r.className = 'brow';
+  r.innerHTML = '<div class="bav"><img src="' + M + '" alt=""></div>';
+  var bbl = document.createElement('div');
+  bbl.className = 'bbl ai';
+  bbl.innerHTML = '<div class="sug-label">자주 묻는 질문이에요 👇</div><div class="sug-row" id="ex-row"></div>';
   r.appendChild(bbl);
   chat.appendChild(r);
-  bbl.innerHTML=html;
+
+  var row = document.getElementById('ex-row');
+  EXAMPLES.forEach(function(e) {
+    var btn = document.createElement('button');
+    btn.className = 'sug-btn';
+    btn.style.fontSize = '.82em';
+    btn.textContent = e.t;
+    btn.onclick = function() {
+      addUser(e.t);
+      fetchDirect(e.id);
+    };
+    row.appendChild(btn);
+  });
+  scrollB();
+}
+
+function hKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }
+function aResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 100) + 'px'; }
+function scrollB() { setTimeout(function() { chat.scrollTop = chat.scrollHeight; }, 50); }
+
+function addUser(txt) {
+  var r = document.createElement('div');
+  r.className = 'brow usr';
+  r.innerHTML = '<div class="bav u">나</div><div class="bbl usr">' + esc(txt) + '</div>';
+  chat.appendChild(r);
+  scrollB();
+}
+
+function addAI(html) {
+  var r = document.createElement('div');
+  r.className = 'brow';
+  var bbl = document.createElement('div');
+  bbl.className = 'bbl ai';
+  bbl.innerHTML = html;
+  r.innerHTML = '<div class="bav"><img src="' + M + '" alt=""></div>';
+  r.appendChild(bbl);
+  chat.appendChild(r);
   scrollB();
   return bbl;
 }
 
-// 공감멘트 타이핑 후 카드 fadeIn
-function addAIWithCards(empathy, cardsHtml){
-  var r=document.createElement('div');r.className='brow';
-  var bbl=document.createElement('div');bbl.className='bbl ai';
-  r.innerHTML='<div class="bav"><img src="'+M+'" alt=""></div>';
+// 공감멘트 타이핑 → 카드 fadeIn → 추천칩 fadeIn
+function addAIResult(empathy, cardsHtml, faqId) {
+  var r = document.createElement('div');
+  r.className = 'brow';
+  var bbl = document.createElement('div');
+  bbl.className = 'bbl ai';
+  r.innerHTML = '<div class="bav"><img src="' + M + '" alt=""></div>';
   r.appendChild(bbl);
   chat.appendChild(r);
   scrollB();
 
-  // 공감멘트 타이핑
-  var i=0;
-  var cursor=document.createElement('span');cursor.className='cursor';
+  // 타이핑
+  var i = 0;
+  var cursor = document.createElement('span');
+  cursor.className = 'cursor';
   bbl.appendChild(cursor);
 
-  var t=setInterval(function(){
-    if(i>=empathy.length){
+  var t = setInterval(function() {
+    if (i >= empathy.length) {
       clearInterval(t);
       cursor.remove();
+
       // 카드 fadeIn
-      if(cardsHtml){
-        var wrap=document.createElement('div');
-        wrap.className='fadein';
-        wrap.innerHTML=cardsHtml;
-        bbl.appendChild(wrap);
+      if (cardsHtml) {
+        var cw = document.createElement('div');
+        cw.className = 'fadein';
+        cw.innerHTML = cardsHtml;
+        bbl.appendChild(cw);
         scrollB();
-        setTimeout(function(){wrap.classList.add('show');scrollB();},50);
+        setTimeout(function() { cw.classList.add('show'); scrollB(); }, 50);
+      }
+
+      // 추천칩 fadeIn
+      if (faqId && REL[faqId]) {
+        var sw = document.createElement('div');
+        sw.className = 'fadein';
+        sw.innerHTML = makeSugHtml(faqId);
+        bbl.appendChild(sw);
+        setTimeout(function() { sw.classList.add('show'); scrollB(); }, 300);
       }
       return;
     }
-    var node=document.createTextNode(empathy[i++]);
-    bbl.insertBefore(node,cursor);
+    bbl.insertBefore(document.createTextNode(empathy[i++]), cursor);
     scrollB();
-  },22);
+  }, 22);
 }
 
-function addLoad(){
-  var r=document.createElement('div');r.className='lrow';
-  r.innerHTML='<div class="bav"><img src="'+M+'" alt=""></div>'
-    +'<div class="lbub">'
-    +'<div class="lring"><div class="lring-c"></div><img src="'+M+'" alt=""></div>'
-    +'<div id="lmsg" class="lmsg">'+MSGS[0]+' <span class="ldots"><span></span><span></span><span></span></span></div>'
-    +'</div>';
-  chat.appendChild(r);scrollB();
-  var mi=0;
-  var t=setInterval(function(){
-    mi=(mi+1)%MSGS.length;
-    var el=document.getElementById('lmsg');
-    if(el)el.innerHTML=MSGS[mi]+' <span class="ldots"><span></span><span></span><span></span></span>';
-  },900);
-  r._stop=function(){clearInterval(t);};
+function makeSugHtml(faqId) {
+  var ids = REL[faqId] || [];
+  if (!ids.length) return '';
+  var chips = '';
+  ids.forEach(function(id) {
+    var label = CACHE[id] ? CACHE[id].title : id;
+    // data-id 속성으로 onclick 대신 처리
+    chips += '<button class="sug-btn" data-faqid="' + id + '">' + esc(label) + '</button>';
+  });
+  return '<div class="sug-wrap"><div class="sug-label">💡 이런 것도 궁금하지 않으세요?</div><div class="sug-row">' + chips + '</div></div>';
+}
+
+// 이벤트 위임으로 sug-btn 클릭 처리
+document.addEventListener('click', function(e) {
+  var btn = e.target.closest('.sug-btn[data-faqid]');
+  if (!btn) return;
+  var id = btn.getAttribute('data-faqid');
+  if (!id) return;
+  var label = btn.textContent;
+  addUser(label);
+  fetchDirect(id);
+});
+
+function addLoad() {
+  var r = document.createElement('div');
+  r.className = 'lrow';
+  r.innerHTML = '<div class="bav"><img src="' + M + '" alt=""></div>'
+    + '<div class="lbub">'
+    + '<div class="lring"><div class="lring-c"></div><img src="' + M + '" alt=""></div>'
+    + '<div id="lmsg" class="lmsg">' + MSGS[0] + ' <span class="ldots"><span></span><span></span><span></span></span></div>'
+    + '</div>';
+  chat.appendChild(r);
+  scrollB();
+  var mi = 0;
+  var t = setInterval(function() {
+    mi = (mi + 1) % MSGS.length;
+    var el = document.getElementById('lmsg');
+    if (el) el.innerHTML = MSGS[mi] + ' <span class="ldots"><span></span><span></span><span></span></span>';
+  }, 900);
+  r._stop = function() { clearInterval(t); };
   return r;
 }
 
-function send(){
-  var q=ibox.value.trim();if(!q)return;
-  ibox.value='';ibox.style.height='auto';
-  addUser(q);doSearch(q);
+function send() {
+  var q = ibox.value.trim();
+  if (!q) return;
+  ibox.value = '';
+  ibox.style.height = 'auto';
+  addUser(q);
+  doSearch(q);
 }
 
-async function doSearch(q){
-  sbtn.disabled=true;
-  var lr=addLoad();
-  try{
-    var res=await fetch(W,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q})});
-    var rawTxt=await res.text();
-    if(lr._stop)lr._stop();lr.remove();
-    if(!res.ok){
-      console.debug('[chat] HTTP '+res.status, rawTxt.slice(0,200));
+// Gemini 호출 (자유입력)
+async function doSearch(q) {
+  sbtn.disabled = true;
+  var lr = addLoad();
+  try {
+    var res = await fetch(W, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: q }) });
+    var txt = await res.text();
+    if (lr._stop) lr._stop(); lr.remove();
+    if (!res.ok) {
+      console.debug('[chat] HTTP ' + res.status, txt.slice(0, 200));
       addAI('일시적인 오류가 발생했어요 😥<br>잠시 후 다시 시도해 주세요.');
       return;
     }
-    var data=JSON.parse(rawTxt);
-    render(data,q);
-  }catch(e){
-    console.debug('[chat]',e.message);
-    if(lr._stop)lr._stop();lr.remove();
-    addAI('일시적인 오류가 발생했어요 😥<br>잠시 후 다시 시도해 주세요.');
-  }finally{sbtn.disabled=false;ibox.focus();}
+    var data = JSON.parse(txt);
+    if (data.faq) CACHE[data.faq.id] = data.faq;
+    renderResult(data, q);
+  } catch(e) {
+    console.debug('[chat]', e.message);
+    if (lr._stop) lr._stop(); lr.remove();
+    addAI('일시적인 오류가 발생했어요 😥');
+  } finally {
+    sbtn.disabled = false;
+    ibox.focus();
+  }
 }
 
-function render(data,q){
-  var staff=data.staff,faq=data.faq;
-  var empathy=getEmpathy(q);
+// 직접 FAQ 조회 (토큰 0, 예시버튼/꼬리물기)
+async function fetchDirect(id) {
+  if (CACHE[id]) {
+    renderFaq(CACHE[id]);
+    return;
+  }
+  sbtn.disabled = true;
+  var lr = addLoad();
+  try {
+    var res = await fetch(W, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: '__direct__' + id }) });
+    var data = await res.json();
+    if (lr._stop) lr._stop(); lr.remove();
+    if (data.faq) {
+      CACHE[data.faq.id] = data.faq;
+      renderFaq(data.faq);
+    }
+  } catch(e) {
+    console.debug('[fetchDirect]', e.message);
+    if (lr._stop) lr._stop(); lr.remove();
+  } finally {
+    sbtn.disabled = false;
+    ibox.focus();
+  }
+}
 
-  if(!staff&&!faq){
-    addAIWithCards(empathy,
+function renderFaq(faq) {
+  var lb = faq.link ? '<a class="flink" href="' + esc(faq.link) + '" target="_blank">🔗 홈페이지에서 자세히 보기</a>' : '';
+  var card = '<div class="fcard"><div class="fbar"></div><div class="fbody">'
+    + '<div class="flbl">📚 관련 안내</div>'
+    + '<div class="ftitle">' + esc(faq.title) + '</div>'
+    + '<div class="fsum">' + esc(faq.summary) + '</div>'
+    + lb + '</div></div>';
+  addAIResult('안내드릴게요! 😊', card, faq.id);
+}
+
+function renderResult(data, q) {
+  var staff = data.staff, faq = data.faq;
+  var empathy = getEmpathy(q);
+
+  if (!staff && !faq) {
+    addAIResult(empathy,
       '<div class="fback">'
-      +'<div style="font-size:.8em;color:var(--muted)">안내실로 문의해 주세요</div>'
-      +'<div class="fbacktel">02-721-0729</div>'
-      +'<div class="fbacksub">평일 09:00 – 18:00</div></div>');
+      + '<div style="font-size:.8em;color:var(--muted)">안내실로 문의해 주세요</div>'
+      + '<div class="fbacktel">02-721-0729</div>'
+      + '<div class="fbacksub">평일 09:00 – 18:00</div></div>',
+      null);
     return;
   }
 
-  var cards='';
-  if(faq){
-    var lb=faq.link?'<a class="flink" href="'+esc(faq.link)+'" target="_blank">🔗 홈페이지에서 자세히 보기</a>':'';
-    cards+='<div class="fcard"><div class="fbar"></div><div class="fbody">'
-      +'<div class="flbl">📚 관련 안내</div>'
-      +'<div class="ftitle">'+esc(faq.title)+'</div>'
-      +'<div class="fsum">'+esc(faq.summary)+'</div>'
-      +lb+'</div></div>';
+  var cards = '';
+  if (faq) {
+    var lb = faq.link ? '<a class="flink" href="' + esc(faq.link) + '" target="_blank">🔗 홈페이지에서 자세히 보기</a>' : '';
+    cards += '<div class="fcard"><div class="fbar"></div><div class="fbody">'
+      + '<div class="flbl">📚 관련 안내</div>'
+      + '<div class="ftitle">' + esc(faq.title) + '</div>'
+      + '<div class="fsum">' + esc(faq.summary) + '</div>'
+      + lb + '</div></div>';
   }
-  if(staff){
-    cards+='<div class="scard"><div class="sbar"></div><div class="sbody">'
-      +'<div class="sico">🧑</div>'
-      +'<div class="sinfo">'
-      +'<div class="sdept">'+esc(staff.dept)+'</div>'
-      +'<div class="sname">'+esc(staff.name)+'</div>'
-      +'<div class="srole">'+esc(staff.role)+'</div>'
-      +'</div>'
-      +'<div class="stel"><span style="font-size:.8em;margin-right:3px">☎</span>'
-      +'<span class="stelnum">02-'+esc(staff.tel)+'</span></div>'
-      +'</div></div>';
+  if (staff) {
+    cards += '<div class="scard"><div class="sbar"></div><div class="sbody">'
+      + '<div class="sico">🧑</div>'
+      + '<div class="sinfo">'
+      + '<div class="sdept">' + esc(staff.dept) + '</div>'
+      + '<div class="sname">' + esc(staff.name) + '</div>'
+      + '<div class="srole">' + esc(staff.role) + '</div>'
+      + '</div>'
+      + '<div class="stel"><span style="font-size:.8em;margin-right:3px">☎</span>'
+      + '<span class="stelnum">02-' + esc(staff.tel) + '</span></div>'
+      + '</div></div>';
   }
-
-  addAIWithCards(empathy, cards);
+  addAIResult(empathy, cards, faq ? faq.id : null);
 }
 
-function esc(s){
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 </script>
 </body>
