@@ -161,6 +161,12 @@ async function doSearch(q){
     _d={status:res.status};
     var data=await res.json();
     _d.ok=true;
+    // 임시 디버그: 오류면 화면에 표시
+    if(data.error){
+      if(lr._stop)lr._stop();lr.remove();
+      addAI('🚨 워커오류: '+esc(data.error)+'<br><small style="color:#999">'+esc(data.debug||'')+'</small>');
+      return;
+    }
     if(lr._stop)lr._stop();lr.remove();
     render(data,q);
   }catch(e){
