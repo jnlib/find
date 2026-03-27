@@ -170,8 +170,28 @@ function addAI(html, typing){
   r.appendChild(bbl);
   chat.appendChild(r);
   if(typing===false){bbl.innerHTML=html;scrollB();return r;}
-  // 타이핑 효과
-  typeHTML(bbl, html);
+  // 순수 텍스트만 타이핑 (HTML 없이)
+  typeText(bbl, html, null);
+  return r;
+}
+
+// 공감멘트만 타이핑 후 카드 추가
+function addAIWithCards(empathy, cardsHtml){
+  var r=document.createElement('div');r.className='brow';
+  var bbl=document.createElement('div');bbl.className='bbl ai';
+  r.innerHTML='<div class="bav"><img src="'+M+'" alt=""></div>';
+  r.appendChild(bbl);
+  chat.appendChild(r);
+  scrollB();
+  typeText(bbl, empathy, function(){
+    // 타이핑 완료 후 카드 fadeIn으로 추가
+    var wrap=document.createElement('div');
+    wrap.style.cssText='opacity:0;transition:opacity .4s ease';
+    wrap.innerHTML=cardsHtml;
+    bbl.appendChild(wrap);
+    scrollB();
+    setTimeout(function(){wrap.style.opacity='1';scrollB();},30);
+  });
   return r;
 }
 
@@ -254,21 +274,20 @@ function render(data,q){
     return;
   }
 
-  // 공감 + FAQ 설명 먼저
-  var html = empathy;
+  // 카드 HTML 조립 (공감멘트 제외)
+  var cardsHtml = '';
 
   if(faq){
     var lb=faq.link?'<a class="flink" href="'+esc(faq.link)+'" target="_blank">🔗 홈페이지에서 자세히 보기</a>':'';
-    html+='<div class="fcard"><div class="fbar"></div><div class="fbody">'
+    cardsHtml+='<div class="fcard"><div class="fbar"></div><div class="fbody">'
       +'<div class="flbl">📚 관련 안내</div>'
       +'<div class="ftitle">'+esc(faq.title)+'</div>'
       +'<div class="fsum">'+esc(faq.summary)+'</div>'
       +lb+'</div></div>';
   }
 
-  // 담당자는 아래에
   if(staff){
-    html+='<div class="scard"><div class="sbar"></div><div class="sbody">'
+    cardsHtml+='<div class="scard"><div class="sbar"></div><div class="sbody">'
       +'<div class="sico">🧑</div>'
       +'<div class="sinfo">'
       +'<div class="sdept">'+esc(staff.dept)+'</div>'
@@ -279,7 +298,8 @@ function render(data,q){
       +'</div></div>';
   }
 
-  addAI(html);
+  // 공감멘트 타이핑 → 완료 후 카드 fadeIn
+  addAIWithCards(empathy, cardsHtml);
 }
 
 function esc(s){
