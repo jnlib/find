@@ -159,14 +159,14 @@ async function doSearch(q){
   try{
     var res=await fetch(W,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q})});
     _d={status:res.status};
-    var data=await res.json();
-    _d.ok=true;
-    // 임시 디버그: 오류면 화면에 표시
-    if(data.error){
+    var rawTxt=await res.text();
+    // 임시 디버그: 500이면 텍스트 그대로 표시
+    if(!res.ok){
       if(lr._stop)lr._stop();lr.remove();
-      addAI('🚨 워커오류: '+esc(data.error)+'<br><small style="color:#999">'+esc(data.debug||'')+'</small>');
+      addAI('🚨 HTTP '+res.status+'<br><small style="color:#999;word-break:break-all">'+esc(rawTxt.slice(0,300))+'</small>');
       return;
     }
+    var data=JSON.parse(rawTxt);
     if(lr._stop)lr._stop();lr.remove();
     render(data,q);
   }catch(e){
