@@ -1,86 +1,28 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-.fp{
-  font-family:'Noto Sans KR',sans-serif;
-  background:#fff;
-  border-radius:20px;
-  padding:28px 24px 24px;
-  box-shadow:0 4px 24px rgba(7,33,58,.10);
-  max-width:320px;
-  margin:0 auto;
-  text-align:center;
-}
-.fp-img{
-  width:88px;height:88px;object-fit:contain;
-  margin-bottom:14px;
-  filter:drop-shadow(0 6px 16px rgba(0,207,192,.28));
-}
-.fp-title{
-  font-size:20px;font-weight:900;
-  color:#07213a;letter-spacing:-.02em;
-  margin-bottom:6px;
-}
-.fp-desc{
-  font-size:13px;color:#7a9ab8;
-  line-height:1.7;margin-bottom:22px;
-}
-.fp-input{
-  width:100%;padding:14px 16px;
-  border:2px solid #e8eef8;
-  border-radius:14px;
-  font-family:'Noto Sans KR',sans-serif;
-  font-size:15px;color:#07213a;
-  background:#f7f9ff;outline:none;
-  text-align:center;
-  transition:border-color .15s,box-shadow .15s;
-  margin-bottom:14px;
-}
-.fp-input:focus{
-  border-color:#00cfc0;
-  box-shadow:0 0 0 4px rgba(0,207,192,.1);
-  background:#fff;
-}
+.fp{font-family:'Noto Sans KR',sans-serif;background:#fff;border-radius:20px;padding:28px 24px 24px;box-shadow:0 4px 24px rgba(7,33,58,.10);max-width:320px;margin:0 auto;text-align:center}
+.fp-img{width:88px;height:88px;object-fit:contain;margin-bottom:14px;filter:drop-shadow(0 6px 16px rgba(0,207,192,.28))}
+.fp-title{font-size:20px;font-weight:900;color:#07213a;letter-spacing:-.02em;margin-bottom:6px}
+.fp-desc{font-size:13px;color:#7a9ab8;line-height:1.7;margin-bottom:22px}
+.fp-input{width:100%;padding:14px 16px;border:2px solid #e8eef8;border-radius:14px;font-family:'Noto Sans KR',sans-serif;font-size:15px;color:#07213a;background:#f7f9ff;outline:none;text-align:center;transition:border-color .15s,box-shadow .15s;margin-bottom:14px}
+.fp-input:focus{border-color:#00cfc0;box-shadow:0 0 0 4px rgba(0,207,192,.1);background:#fff}
 .fp-input::placeholder{color:#b0bdd0;font-size:13.5px}
-.fp-btn{
-  display:inline-flex;align-items:center;justify-content:center;gap:6px;
-  padding:13px 28px;
-  background:linear-gradient(135deg,#00c4b4,#0075d8);
-  color:#fff;border:none;border-radius:50px;
-  font-family:'Noto Sans KR',sans-serif;
-  font-size:15px;font-weight:700;
-  cursor:pointer;
-  box-shadow:0 4px 16px rgba(0,160,200,.3);
-  transition:transform .12s,box-shadow .12s;
-}
-.fp-btn:hover{transform:scale(1.04);box-shadow:0 6px 20px rgba(0,160,200,.38)}
+.fp-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:13px 28px;background:linear-gradient(135deg,#00c4b4,#0075d8);color:#fff;border:none;border-radius:50px;font-family:'Noto Sans KR',sans-serif;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(0,160,200,.3);transition:transform .12s}
+.fp-btn:hover{transform:scale(1.04)}
 .fp-btn:active{transform:scale(.97)}
-.fp-divider{
-  display:flex;align-items:center;gap:10px;
-  margin:18px 0 12px;
-}
-.fp-divider::before,.fp-divider::after{
-  content:'';flex:1;height:1px;background:#eef1f8;
-}
+.fp-divider{display:flex;align-items:center;gap:10px;margin:18px 0 12px}
+.fp-divider::before,.fp-divider::after{content:'';flex:1;height:1px;background:#eef1f8}
 .fp-divider span{font-size:11px;color:#c8d0e0;white-space:nowrap}
-.fp-tags{
-  display:flex;flex-wrap:wrap;justify-content:center;gap:6px;
-}
-.fp-tag{
-  padding:4px 11px;
-  background:#f4f7fd;
-  border:1px solid #e4eaf6;
-  border-radius:20px;
-  font-size:11.5px;color:#6a80a8;
-}
+.fp-tags{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
+.fp-tag{padding:4px 11px;background:#f4f7fd;border:1px solid #e4eaf6;border-radius:20px;font-size:11.5px;color:#6a80a8}
 </style>
-
 <div class="fp">
   <img class="fp-img" src="https://jnlib.github.io/find/mascot.png" alt="">
   <div class="fp-title">무엇이든 물어보세요</div>
   <div class="fp-desc">담당자 안내부터 도서관 이용 정보까지<br>AI가 한 번에 찾아드려요</div>
-  <form action="https://findjnlib.hdh1231.workers.dev/search" method="POST" target="_blank">
-    <input class="fp-input" name="question" placeholder="예) 책 반납이 늦었는데 어떻게 하나요?">
+  <form action="https://jnlib.github.io/find/chat.html" method="GET" target="_blank">
+    <input class="fp-input" name="q" placeholder="예) 책 반납이 늦었는데 어떻게 하나요?">
     <br>
     <button class="fp-btn" type="submit">✨ AI에게 물어보기</button>
   </form>
