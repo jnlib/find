@@ -84,6 +84,17 @@ body{font-family:'Noto Sans KR',sans-serif;background:linear-gradient(160deg,#ee
 .sbtn:active{transform:scale(.93)}
 .sbtn:disabled{opacity:.35;cursor:not-allowed;transform:none}
 .ihint{font-size:.7em;color:rgba(7,33,58,.25);text-align:center;margin-top:6px}
+.sat-wrap{margin-top:4px}
+.sat-q{font-size:.9em;font-weight:700;color:var(--navy);margin-bottom:10px;line-height:1.6}
+.sat-row{display:flex;gap:6px;flex-wrap:wrap}
+.sat-btn{flex:1;min-width:0;padding:10px 4px;border:2px solid rgba(0,207,192,.2);border-radius:12px;background:#fff;cursor:pointer;text-align:center;font-family:'Noto Sans KR',sans-serif;transition:all .2s;font-size:.82em;line-height:1.4}
+.sat-btn:hover{border-color:var(--teal);background:rgba(0,207,192,.06);transform:scale(1.04)}
+.sat-btn:active{transform:scale(.95)}
+.sat-btn .sat-emoji{font-size:1.5em;display:block;margin-bottom:3px}
+.sat-btn .sat-label{font-size:.78em;color:var(--muted);font-weight:600}
+.sat-btn.selected{border-color:var(--teal);background:linear-gradient(135deg,rgba(0,207,192,.12),rgba(49,130,255,.08));box-shadow:0 2px 12px rgba(0,207,192,.2)}
+.sat-btn.selected .sat-label{color:var(--teal2);font-weight:900}
+.sat-done{text-align:center;padding:8px;font-size:.88em;color:var(--teal2);font-weight:700}
 </style>
 </head>
 <body>
@@ -394,8 +405,8 @@ function addAIResult(empathy, cardsHtml, faqId) {
           sw.className = 'fadein';
           sw.innerHTML = makeSugHtml(faqId);
           bbl.appendChild(sw);
-          setTimeout(function() { sw.classList.add('show'); scrollB(); }, 300);
-        }
+          setTimeout(function() { sw.classList.add('show'); scrollB(); showSatisfaction(); }, 300);
+        } else { showSatisfaction(); }
         return;
       }
 
@@ -452,8 +463,9 @@ function addAIResult(empathy, cardsHtml, faqId) {
                 sw.className = 'fadein';
                 sw.innerHTML = makeSugHtml(faqId);
                 bbl.appendChild(sw);
-                setTimeout(function() { sw.classList.add('show'); scrollB(); }, 400);
+                setTimeout(function() { sw.classList.add('show'); scrollB(); showSatisfaction(); }, 400);
               }
+              if (!faqId || !REL[faqId]) showSatisfaction();
               return;
             }
             fsumEl.insertBefore(document.createTextNode(summaryText[si++]), scursor);
@@ -468,8 +480,8 @@ function addAIResult(empathy, cardsHtml, faqId) {
             sw2.className = 'fadein';
             sw2.innerHTML = makeSugHtml(faqId);
             bbl.appendChild(sw2);
-            setTimeout(function() { sw2.classList.add('show'); scrollB(); }, 400);
-          }
+            setTimeout(function() { sw2.classList.add('show'); scrollB(); showSatisfaction(); }, 400);
+          } else { showSatisfaction(); }
         }
       }, 80);
       return;
@@ -603,6 +615,128 @@ function renderResult(data, q) {
   }
   addAIResult(empathy, cards, faq ? faq.id : null);
 }
+
+// ── 만족도 조사 ──
+var SAT_EMOJIS = ['😤','😟','😐','😊','🥰'];
+var SAT_LABELS = ['매우 불만족','불만족','보통','만족','매우 만족'];
+var SAT_THANKS = [
+  '소중한 의견 감사합니다 🙏 더 나은 서비스가 될 수 있도록 노력할게요!',
+  '의견 감사합니다 🙏 부족한 부분을 개선하겠습니다!',
+  '감사합니다 😊 더 유용한 안내를 드릴 수 있도록 노력할게요!',
+  '감사합니다! 😊 앞으로도 좋은 안내 드릴게요!',
+  '정말 감사합니다! 🎉 큰 힘이 됩니다!'
+];
+var satShown = false; // 중복 방지
+
+function showSatisfaction() {
+  if (satShown) return;
+  satShown = true;
+  setTimeout(function() { satShown = false; }, 3000); // 3초 후 다시 가능
+
+  setTimeout(function() {
+    var r = document.createElement('div');
+    r.className = 'brow';
+    var bbl = document.createElement('div');
+    bbl.className = 'bbl ai';
+    r.innerHTML = '<div class="bav"><img src="' + M + '" alt=""></div>';
+
+    var satId = 'sat-' + Date.now();
+    var btns = '';
+    for (var i = 0; i < 5; i++) {
+      btns += '<button class="sat-btn" data-satid="' + satId + '" data-score="' + (i+1) + '">'
+        + '<span class="sat-emoji">' + SAT_EMOJIS[i] + '</span>'
+        + '<span class="sat-label">' + SAT_LABELS[i] + '</span></button>';
+    }
+
+    bbl.innerHTML = '<div class="sat-wrap">'
+      + '<div class="sat-q">답변이 도움이 되셨나요? 😊<br><span style="font-size:.82em;font-weight:400;color:var(--muted)">터치 한번이면 끝! 여러분의 의견이 큰 힘이 됩니다</span></div>'
+      + '<div class="sat-row" id="' + satId + '">' + btns + '</div></div>';
+
+    r.appendChild(bbl);
+    chat.appendChild(r);
+    scrollB();
+  }, 800);
+}
+
+// 만족도 버튼 클릭 처리 (이벤트 위임)
+document.addEventListener('click', function(e) {
+  var btn = e.target.closest('.sat-btn[data-score]');
+  if (!btn) return;
+  var score = parseInt(btn.getAttribute('data-score'));
+  var satId = btn.getAttribute('data-satid');
+  var row = document.getElementById(satId);
+  if (!row || row.dataset.done) return;
+  row.dataset.done = '1';
+
+  // 선택 표시
+  btn.classList.add('selected');
+
+  // 사용자 답변 버블
+  addUser(SAT_EMOJIS[score-1] + ' ' + SAT_LABELS[score-1]);
+
+  // 감사 메시지
+  setTimeout(function() {
+    // 버튼들 비활성화
+    row.querySelectorAll('.sat-btn').forEach(function(b) {
+      b.style.pointerEvents = 'none';
+      if (!b.classList.contains('selected')) b.style.opacity = '.4';
+    });
+    addAI(SAT_THANKS[score-1]);
+    scrollB();
+
+    // Worker에 저장 (fire & forget)
+    try {
+      fetch(W.replace('/search', '/satisfaction'), {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({score: score, timestamp: new Date().toISOString()})
+      }).catch(function(){});
+    } catch(e) {}
+  }, 400);
+});
+
+// 입력으로 만족도 응답 처리
+var origSend = send;
+send = function() {
+  var q = ibox.value.trim();
+  // 만족도 숫자 입력 체크 (1~5, 또는 한글 레이블)
+  var satMatch = null;
+  if (/^[1-5]$/.test(q)) {
+    satMatch = parseInt(q);
+  } else {
+    for (var i = 0; i < SAT_LABELS.length; i++) {
+      if (q === SAT_LABELS[i] || q === SAT_EMOJIS[i]) { satMatch = i + 1; break; }
+    }
+  }
+
+  // 활성 만족도 조사가 있는지 확인
+  var activeSat = document.querySelector('.sat-row:not([data-done])');
+  if (satMatch && activeSat) {
+    ibox.value = '';
+    ibox.style.height = 'auto';
+    activeSat.dataset.done = '1';
+    var targetBtn = activeSat.querySelector('[data-score="' + satMatch + '"]');
+    if (targetBtn) targetBtn.classList.add('selected');
+    activeSat.querySelectorAll('.sat-btn').forEach(function(b) {
+      b.style.pointerEvents = 'none';
+      if (!b.classList.contains('selected')) b.style.opacity = '.4';
+    });
+    addUser(SAT_EMOJIS[satMatch-1] + ' ' + SAT_LABELS[satMatch-1]);
+    setTimeout(function() {
+      addAI(SAT_THANKS[satMatch-1]);
+      scrollB();
+      try {
+        fetch(W.replace('/search', '/satisfaction'), {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({score: satMatch, timestamp: new Date().toISOString()})
+        }).catch(function(){});
+      } catch(e) {}
+    }, 400);
+    return;
+  }
+  origSend();
+};
 
 function esc(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
