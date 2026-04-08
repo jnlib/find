@@ -621,11 +621,13 @@ function renderResult(data, q) {
       + lb + '</div></div>';
   }
   if (staff) {
+    var duties = (staff.duties||[]).slice(0,3).map(function(d){return '<span style="display:inline-block;background:#f0f4ff;color:#3b6cb4;padding:2px 8px;border-radius:6px;font-size:.75em;font-weight:600;margin:1px">'+esc(d)+'</span>'}).join(' ');
     cards += '<div class="scard"><div class="sbar"></div><div class="sbody">'
       + '<div class="sico">🧑</div><div class="sinfo">'
       + '<div class="sdept">' + esc(staff.dept) + '</div>'
       + '<div class="sname">' + esc(staff.name) + '</div>'
       + '<div class="srole">' + esc(staff.role) + '</div>'
+      + (duties ? '<div style="margin-top:4px;line-height:1.8">' + duties + '</div>' : '')
       + '</div><div class="stel"><span style="font-size:.8em;margin-right:3px">☎</span>'
       + '<span class="stelnum">02-' + esc(staff.tel) + '</span></div></div></div>';
   }
