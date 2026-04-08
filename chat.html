@@ -117,10 +117,25 @@ body{font-family:'Noto Sans KR',sans-serif;background:linear-gradient(160deg,#ee
 </div>
 <script>
 var W = 'https://findjnlib.hdh1231.workers.dev/search';
+var STAT_URL = 'https://findjnlib.hdh1231.workers.dev/stat';
 var M = 'https://jnlib.github.io/find/mascot.png';
 var chat = document.getElementById('chat');
 var ibox = document.getElementById('ibox');
 var sbtn = document.getElementById('sbtn');
+
+// 통계 전송 (fire & forget)
+function sendStat(type, data) {
+  try {
+    fetch(STAT_URL, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(Object.assign({type: type}, data || {}))
+    }).catch(function(){});
+  } catch(e) {}
+}
+
+// 페이지 로드 시 방문자 카운트
+sendStat('visit');
 var MSGS = ['질문을 분석하고 있어요','담당자를 찾고 있어요','관련 정보를 확인하고 있어요','거의 다 됐어요'];
 var CACHE = {};
 
@@ -539,6 +554,7 @@ function send() {
 }
 
 async function doSearch(q) {
+  sendStat('question');
   sbtn.disabled = true;
   var lr = addLoad();
   try {
@@ -617,14 +633,15 @@ function renderResult(data, q) {
 }
 
 // ── 만족도 조사 ──
-var SAT_EMOJIS = ['😤','😟','😐','😊','🥰'];
-var SAT_LABELS = ['매우 불만족','불만족','보통','만족','매우 만족'];
+var SAT_EMOJIS = ['🥰','😊','😐','😟','😤'];
+var SAT_LABELS = ['매우 만족','만족','보통','불만족','매우 불만족'];
+var SAT_SCORES = [5, 4, 3, 2, 1];
 var SAT_THANKS = [
-  '소중한 의견 감사합니다 🙏 더 나은 서비스가 될 수 있도록 노력할게요!',
-  '의견 감사합니다 🙏 부족한 부분을 개선하겠습니다!',
-  '감사합니다 😊 더 유용한 안내를 드릴 수 있도록 노력할게요!',
+  '정말 감사합니다! 🎉 큰 힘이 됩니다!',
   '감사합니다! 😊 앞으로도 좋은 안내 드릴게요!',
-  '정말 감사합니다! 🎉 큰 힘이 됩니다!'
+  '감사합니다 😊 더 유용한 안내를 드릴 수 있도록 노력할게요!',
+  '의견 감사합니다 🙏 부족한 부분을 개선하겠습니다!',
+  '소중한 의견 감사합니다 🙏 더 나은 서비스가 될 수 있도록 노력할게요!'
 ];
 var satShown = false; // 중복 방지
 
@@ -643,7 +660,7 @@ function showSatisfaction() {
     var satId = 'sat-' + Date.now();
     var btns = '';
     for (var i = 0; i < 5; i++) {
-      btns += '<button class="sat-btn" data-satid="' + satId + '" data-score="' + (i+1) + '">'
+      btns += '<button class="sat-btn" data-satid="' + satId + '" data-idx="' + i + '">'
         + '<span class="sat-emoji">' + SAT_EMOJIS[i] + '</span>'
         + '<span class="sat-label">' + SAT_LABELS[i] + '</span></button>';
     }
@@ -660,38 +677,26 @@ function showSatisfaction() {
 
 // 만족도 버튼 클릭 처리 (이벤트 위임)
 document.addEventListener('click', function(e) {
-  var btn = e.target.closest('.sat-btn[data-score]');
+  var btn = e.target.closest('.sat-btn[data-idx]');
   if (!btn) return;
-  var score = parseInt(btn.getAttribute('data-score'));
+  var idx = parseInt(btn.getAttribute('data-idx'));
+  var score = SAT_SCORES[idx];
   var satId = btn.getAttribute('data-satid');
   var row = document.getElementById(satId);
   if (!row || row.dataset.done) return;
   row.dataset.done = '1';
 
-  // 선택 표시
   btn.classList.add('selected');
+  addUser(SAT_EMOJIS[idx] + ' ' + SAT_LABELS[idx]);
 
-  // 사용자 답변 버블
-  addUser(SAT_EMOJIS[score-1] + ' ' + SAT_LABELS[score-1]);
-
-  // 감사 메시지
   setTimeout(function() {
-    // 버튼들 비활성화
     row.querySelectorAll('.sat-btn').forEach(function(b) {
       b.style.pointerEvents = 'none';
       if (!b.classList.contains('selected')) b.style.opacity = '.4';
     });
-    addAI(SAT_THANKS[score-1]);
+    addAI(SAT_THANKS[idx]);
     scrollB();
-
-    // Worker에 저장 (fire & forget)
-    try {
-      fetch(W.replace('/search', '/satisfaction'), {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({score: score, timestamp: new Date().toISOString()})
-      }).catch(function(){});
-    } catch(e) {}
+    sendStat('satisfaction', {score: score});
   }, 400);
 });
 
@@ -699,41 +704,35 @@ document.addEventListener('click', function(e) {
 var origSend = send;
 send = function() {
   var q = ibox.value.trim();
-  // 만족도 숫자 입력 체크 (1~5, 또는 한글 레이블)
-  var satMatch = null;
-  if (/^[1-5]$/.test(q)) {
-    satMatch = parseInt(q);
-  } else {
-    for (var i = 0; i < SAT_LABELS.length; i++) {
-      if (q === SAT_LABELS[i] || q === SAT_EMOJIS[i]) { satMatch = i + 1; break; }
-    }
-  }
-
-  // 활성 만족도 조사가 있는지 확인
   var activeSat = document.querySelector('.sat-row:not([data-done])');
-  if (satMatch && activeSat) {
-    ibox.value = '';
-    ibox.style.height = 'auto';
-    activeSat.dataset.done = '1';
-    var targetBtn = activeSat.querySelector('[data-score="' + satMatch + '"]');
-    if (targetBtn) targetBtn.classList.add('selected');
-    activeSat.querySelectorAll('.sat-btn').forEach(function(b) {
-      b.style.pointerEvents = 'none';
-      if (!b.classList.contains('selected')) b.style.opacity = '.4';
-    });
-    addUser(SAT_EMOJIS[satMatch-1] + ' ' + SAT_LABELS[satMatch-1]);
-    setTimeout(function() {
-      addAI(SAT_THANKS[satMatch-1]);
-      scrollB();
-      try {
-        fetch(W.replace('/search', '/satisfaction'), {
-          method: 'POST',
-          headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({score: satMatch, timestamp: new Date().toISOString()})
-        }).catch(function(){});
-      } catch(e) {}
-    }, 400);
-    return;
+  if (activeSat) {
+    var matchIdx = -1;
+    // 숫자 입력: 1=매우만족, 5=매우불만족
+    if (/^[1-5]$/.test(q)) { matchIdx = parseInt(q) - 1; }
+    // 텍스트/이모지 매칭
+    if (matchIdx < 0) {
+      for (var i = 0; i < SAT_LABELS.length; i++) {
+        if (q === SAT_LABELS[i] || q === SAT_EMOJIS[i]) { matchIdx = i; break; }
+      }
+    }
+    if (matchIdx >= 0) {
+      ibox.value = '';
+      ibox.style.height = 'auto';
+      activeSat.dataset.done = '1';
+      var targetBtn = activeSat.querySelector('[data-idx="' + matchIdx + '"]');
+      if (targetBtn) targetBtn.classList.add('selected');
+      activeSat.querySelectorAll('.sat-btn').forEach(function(b) {
+        b.style.pointerEvents = 'none';
+        if (!b.classList.contains('selected')) b.style.opacity = '.4';
+      });
+      addUser(SAT_EMOJIS[matchIdx] + ' ' + SAT_LABELS[matchIdx]);
+      setTimeout(function() {
+        addAI(SAT_THANKS[matchIdx]);
+        scrollB();
+        sendStat('satisfaction', {score: SAT_SCORES[matchIdx]});
+      }, 400);
+      return;
+    }
   }
   origSend();
 };

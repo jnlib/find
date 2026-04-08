@@ -43,6 +43,7 @@ tr:hover td{background:#f7faff}
 .modal-left{flex:1;min-width:0}
 .modal-right{width:340px;flex-shrink:0;position:sticky;top:0;align-self:flex-start;max-height:75vh;overflow-y:auto}
 @media(max-width:900px){.modal-split{flex-direction:column}.modal-right{width:100%;position:static;max-height:none}}
+@media(max-width:700px){#panel-stats .test-area+.test-area{margin-top:0} #panel-stats>div:nth-child(3){grid-template-columns:1fr!important}}
 .form-group{margin-bottom:14px}
 .form-group label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:4px}
 .form-group input,.form-group textarea,.form-group select{width:100%;padding:10px;border:2px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit}
@@ -97,6 +98,7 @@ tr:hover td{background:#f7faff}
   <div class="tabs">
     <div class="tab active" data-tab="faq" onclick="switchTab('faq',this)">FAQ 관리</div>
     <div class="tab" data-tab="staff" onclick="switchTab('staff',this)">담당자 관리</div>
+    <div class="tab" data-tab="stats" onclick="switchTab('stats',this);loadStats()">통계 대시보드</div>
     <div class="tab" data-tab="test" onclick="switchTab('test',this)">테스트 콘솔</div>
   </div>
 
@@ -127,6 +129,47 @@ tr:hover td{background:#f7faff}
     <div style="overflow-x:auto">
       <table><thead><tr><th>ID</th><th>부서</th><th>직책</th><th>이름</th><th>전화</th><th>키워드</th><th>관리</th></tr></thead>
       <tbody id="staffTable"></tbody></table>
+    </div>
+  </div>
+
+  <!-- 통계 대시보드 패널 -->
+  <div id="panel-stats" class="panel">
+    <div style="display:flex;gap:10px;margin-bottom:16px;align-items:center">
+      <h3 style="flex:1">통계 대시보드</h3>
+      <button class="btn btn-blue" onclick="loadStats()">새로고침</button>
+      <button class="btn btn-red" onclick="resetStats()">통계 초기화</button>
+    </div>
+
+    <!-- 요약 카드 -->
+    <div id="statCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px"></div>
+
+    <!-- 만족도 분포 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+      <div class="test-area">
+        <h4 style="margin-bottom:12px">만족도 분포 (전체)</h4>
+        <div id="satChart"></div>
+      </div>
+      <div class="test-area">
+        <h4 style="margin-bottom:12px">만족도 현황</h4>
+        <div id="satSummary"></div>
+      </div>
+    </div>
+
+    <!-- 일별 추이 -->
+    <div class="test-area" style="margin-bottom:20px">
+      <h4 style="margin-bottom:12px">일별 추이 (최근 30일)</h4>
+      <div id="dailyChart" style="overflow-x:auto"></div>
+    </div>
+
+    <!-- 일별 상세 테이블 -->
+    <div class="test-area">
+      <h4 style="margin-bottom:12px">일별 상세 데이터</h4>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>날짜</th><th>방문</th><th>질문</th><th>만족도 응답</th><th>평균 점수</th><th>미응답</th></tr></thead>
+          <tbody id="dailyTable"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -632,6 +675,113 @@ function doTest() {
     });
     document.getElementById('testResult').innerHTML = html;
   });
+}
+
+// ── 통계 대시보드 ──
+function loadStats() {
+  api('GET', '/admin/stats').then(function(d) {
+    if (d.error) { toast('통계 로드 실패: ' + d.error); return; }
+    renderStats(d);
+  });
+}
+
+function renderStats(d) {
+  var all = d.all || {};
+  var daily = d.daily || [];
+  var satAvg = all.satAvg || 0;
+  var satCounts = all.satCounts || [0,0,0,0,0];
+  var satTotal = all.satTotal || 0;
+  var noResponse = Math.max(0, (all.questions || 0) - satTotal);
+
+  // 요약 카드
+  var cards = [
+    {label:'총 방문자', value: fmt(all.visits || 0), icon:'👥', color:'#3182ff'},
+    {label:'총 질문 수', value: fmt(all.questions || 0), icon:'💬', color:'#00cfc0'},
+    {label:'만족도 응답', value: fmt(satTotal), icon:'📊', color:'#ed8936'},
+    {label:'미응답', value: fmt(noResponse), icon:'🔕', color:'#e53e3e'},
+    {label:'평균 만족도', value: satAvg + ' / 5.0', icon: satAvg >= 4 ? '🥰' : satAvg >= 3 ? '😊' : '😐', color:'#9f7aea'},
+    {label:'운영 일수', value: d.totalDays + '일', icon:'📅', color:'#38a169'},
+  ];
+  document.getElementById('statCards').innerHTML = cards.map(function(c) {
+    return '<div style="background:#fff;border-radius:12px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.06);border-left:4px solid '+c.color+'">'
+      +'<div style="font-size:2em;margin-bottom:4px">'+c.icon+'</div>'
+      +'<div style="font-size:1.5em;font-weight:900;color:var(--navy)">'+c.value+'</div>'
+      +'<div style="font-size:.82em;color:var(--muted);margin-top:2px">'+c.label+'</div></div>';
+  }).join('');
+
+  // 만족도 분포 바 차트
+  var satLabels = ['매우 만족','만족','보통','불만족','매우 불만족'];
+  var satEmojis = ['🥰','😊','😐','😟','😤'];
+  var satColors = ['#00cfc0','#38a169','#ed8936','#e53e3e','#c53030'];
+  var satOrder = [4,3,2,1,0]; // 5점→1점 순
+  var maxCount = Math.max.apply(null, satCounts.concat([1]));
+  var chartHtml = '';
+  for (var si = 0; si < 5; si++) {
+    var scoreIdx = satOrder[si]; // KV index (0=1점, 4=5점)
+    var count = satCounts[scoreIdx];
+    var pct = satTotal > 0 ? Math.round((count / satTotal) * 100) : 0;
+    var barW = Math.max(2, Math.round((count / maxCount) * 100));
+    chartHtml += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+      +'<div style="width:90px;font-size:.85em;text-align:right">'+satEmojis[si]+' '+satLabels[si]+'</div>'
+      +'<div style="flex:1;background:#f0f0f0;border-radius:4px;height:22px;overflow:hidden">'
+      +'<div style="width:'+barW+'%;height:100%;background:'+satColors[si]+';border-radius:4px;transition:width .5s"></div></div>'
+      +'<div style="width:60px;font-size:.85em;font-weight:700">'+count+'건 ('+pct+'%)</div></div>';
+  }
+  document.getElementById('satChart').innerHTML = chartHtml;
+
+  // 만족도 현황
+  var sumHtml = '<div style="text-align:center;padding:20px">'
+    +'<div style="font-size:3.5em">'+( satAvg >= 4.5 ? '🥰' : satAvg >= 3.5 ? '😊' : satAvg >= 2.5 ? '😐' : satAvg >= 1.5 ? '😟' : satAvg > 0 ? '😤' : '➖')+'</div>'
+    +'<div style="font-size:2.2em;font-weight:900;color:var(--navy);margin:8px 0">'+satAvg+'<span style="font-size:.5em;color:var(--muted)"> / 5.0</span></div>'
+    +'<div style="font-size:.9em;color:var(--muted)">총 '+fmt(satTotal)+'건 응답</div>'
+    +'<div style="margin-top:12px;font-size:.85em;color:var(--muted)">'
+    +'응답률: '+(all.questions > 0 ? Math.round((satTotal / all.questions) * 100) : 0)+'%'
+    +' ('+fmt(satTotal)+'/'+fmt(all.questions || 0)+'건)</div></div>';
+  document.getElementById('satSummary').innerHTML = sumHtml;
+
+  // 일별 추이 차트 (바 차트)
+  if (daily.length === 0) {
+    document.getElementById('dailyChart').innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px">아직 데이터가 없습니다</div>';
+  } else {
+    var maxVisit = Math.max.apply(null, daily.map(function(d){return Math.max(d.visits||0, d.questions||0);}).concat([1]));
+    var barHtml = '<div style="display:flex;align-items:flex-end;gap:3px;height:160px;padding-bottom:28px;position:relative">';
+    daily.forEach(function(day) {
+      var vh = Math.max(2, Math.round(((day.visits||0)/maxVisit)*120));
+      var qh = Math.max(2, Math.round(((day.questions||0)/maxVisit)*120));
+      var dateLabel = day.date.slice(5); // MM-DD
+      barHtml += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;min-width:28px">'
+        +'<div style="display:flex;gap:2px;align-items:flex-end;height:120px">'
+        +'<div title="방문 '+(day.visits||0)+'" style="width:10px;height:'+vh+'px;background:#3182ff;border-radius:2px 2px 0 0;opacity:.7"></div>'
+        +'<div title="질문 '+(day.questions||0)+'" style="width:10px;height:'+qh+'px;background:#00cfc0;border-radius:2px 2px 0 0;opacity:.7"></div></div>'
+        +'<div style="font-size:.65em;color:var(--muted);margin-top:4px;transform:rotate(-45deg);white-space:nowrap">'+dateLabel+'</div></div>';
+    });
+    barHtml += '</div>';
+    barHtml += '<div style="display:flex;gap:16px;justify-content:center;margin-top:8px;font-size:.78em;color:var(--muted)">'
+      +'<span><span style="display:inline-block;width:10px;height:10px;background:#3182ff;border-radius:2px;vertical-align:middle;margin-right:4px"></span>방문</span>'
+      +'<span><span style="display:inline-block;width:10px;height:10px;background:#00cfc0;border-radius:2px;vertical-align:middle;margin-right:4px"></span>질문</span></div>';
+    document.getElementById('dailyChart').innerHTML = barHtml;
+  }
+
+  // 일별 상세 테이블 (최신순)
+  var reversed = daily.slice().reverse();
+  document.getElementById('dailyTable').innerHTML = reversed.map(function(day) {
+    var dayAvg = day.satTotal > 0 ? (day.satSum / day.satTotal).toFixed(1) : '-';
+    var dayNoResp = Math.max(0, (day.questions||0) - (day.satTotal||0));
+    return '<tr><td>'+day.date+'</td><td>'+fmt(day.visits||0)+'</td><td>'+fmt(day.questions||0)+'</td>'
+      +'<td>'+fmt(day.satTotal||0)+'</td><td>'+dayAvg+'</td><td>'+fmt(dayNoResp)+'</td></tr>';
+  }).join('');
+}
+
+function resetStats() {
+  if (!confirm('모든 통계 데이터를 초기화하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
+  api('DELETE', '/admin/stats').then(function(d) {
+    if (d.ok) { toast('통계 초기화 완료'); loadStats(); }
+    else toast('오류: ' + (d.error || ''));
+  });
+}
+
+function fmt(n) {
+  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
 // ── 마이그레이션 ──
