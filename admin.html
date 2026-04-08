@@ -37,8 +37,12 @@ th,td{padding:10px 14px;text-align:left;font-size:13px;border-bottom:1px solid v
 th{background:#f8fafc;font-weight:700;color:var(--muted);font-size:12px;text-transform:uppercase;position:sticky;top:0}
 tr:hover td{background:#f7faff}
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:center;justify-content:center}
-.modal{background:#fff;border-radius:16px;padding:28px;width:90%;max-width:650px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal{background:#fff;border-radius:16px;padding:28px;width:95%;max-width:1100px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
 .modal h3{margin-bottom:16px;font-size:17px}
+.modal-split{display:flex;gap:24px}
+.modal-left{flex:1;min-width:0}
+.modal-right{width:340px;flex-shrink:0;position:sticky;top:0;align-self:flex-start;max-height:75vh;overflow-y:auto}
+@media(max-width:900px){.modal-split{flex-direction:column}.modal-right{width:100%;position:static;max-height:none}}
 .form-group{margin-bottom:14px}
 .form-group label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:4px}
 .form-group input,.form-group textarea,.form-group select{width:100%;padding:10px;border:2px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit}
@@ -253,7 +257,8 @@ function openFaqModal(id) {
 
   document.getElementById('modalContainer').innerHTML = '<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal">'
     +'<h3>'+(isNew?'FAQ 추가':'FAQ 수정 ('+id+')')+'</h3>'
-    + FAQ_TIP
+    +'<div class="modal-split">'
+    +'<div class="modal-left">'
     +'<div class="form-group"><label>ID (예: q071) - 자동 부여됨</label><input id="mFaqId" value="'+(faq?faq.id:nextFaqId())+'" '+(isNew?'':'readonly style="background:#f0f0f0"')+'></div>'
     +'<div class="form-group"><label>제목 <span style="color:var(--muted);font-weight:400">- 간결한 서비스명 (괄호로 부가설명)</span></label><input id="mFaqTitle" value="'+esc(faq?faq.title:'')+'" placeholder="예: 북카페 이용안내(지하1층 쉼터)"></div>'
     +'<div class="form-group"><label>요약 설명 <span style="color:var(--muted);font-weight:400">- 친근한 말투, 구체적 정보 포함</span></label><textarea id="mFaqSummary" placeholder="예: 지하 1층 인왕관 옆에 북카페가 있어요! 음료를 마시며 편하게 책을 읽을 수 있는 공간이에요.">'+(faq?esc(faq.summary):'')+'</textarea></div>'
@@ -267,6 +272,9 @@ function openFaqModal(id) {
     +'<input type="hidden" id="mRels" value="'+rels.join(',')+'">'
     +'</div>'
     +'<div class="form-actions"><button class="btn btn-outline" onclick="closeModal()">취소</button><button class="btn btn-teal" onclick="saveFaq()" id="saveFaqBtn">저장 (임베딩 자동생성)</button></div>'
+    +'</div>'
+    +'<div class="modal-right">' + FAQ_TIP + '</div>'
+    +'</div>'
     +'</div></div>';
 }
 
@@ -358,7 +366,8 @@ function openStaffModal(id) {
   var isNew = !s;
   document.getElementById('modalContainer').innerHTML = '<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal">'
     +'<h3>'+(isNew?'담당자 추가':'담당자 수정 ('+id+')')+'</h3>'
-    + STAFF_TIP
+    +'<div class="modal-split">'
+    +'<div class="modal-left">'
     +'<div class="form-group"><label>ID (예: p024)</label><input id="mSId" value="'+(s?s.id:nextStaffId())+'" '+(isNew?'':'readonly style="background:#f0f0f0"')+'></div>'
     +'<div class="form-group"><label>부서</label><input id="mSDept" value="'+esc(s?s.dept:'')+'" placeholder="예: 정보서비스팀 어문학실"></div>'
     +'<div class="form-group"><label>직책</label><input id="mSRole" value="'+esc(s?s.role:'')+'" placeholder="예: 주무관"></div>'
@@ -367,6 +376,9 @@ function openStaffModal(id) {
     +'<div class="form-group"><label>키워드 <span style="color:var(--muted);font-weight:400">- 시민이 찾을 때 쓸 검색어, 쉼표 구분</span></label><input id="mSKw" value="'+esc(s?s.keywords:'')+'" placeholder="예: 대출,반납,연체,연체료,스마트도서관"></div>'
     +'<div class="form-group"><label>담당업무 (한 줄에 하나씩)</label><textarea id="mSDuties" placeholder="통합대출데스크 총괄\n연체자료 관리\n어르신 택배 서비스">'+(s?(s.duties||[]).join('\n'):'')+'</textarea></div>'
     +'<div class="form-actions"><button class="btn btn-outline" onclick="closeModal()">취소</button><button class="btn btn-teal" onclick="saveStaff()" id="saveStaffBtn">저장 (임베딩 자동생성)</button></div>'
+    +'</div>'
+    +'<div class="modal-right">' + STAFF_TIP + '</div>'
+    +'</div>'
     +'</div></div>';
 }
 function saveStaff() {
