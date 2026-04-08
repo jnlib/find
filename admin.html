@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>findjnlib 관리자</title>
 <style>
-:root{--bg:#f4f6fb;--card:#fff;--navy:#07213a;--teal:#00cfc0;--blue:#3182ff;--red:#e53e3e;--muted:#7a9ab8;--border:#e2e8f0;--radius:12px}
+:root{--bg:#f4f6fb;--card:#fff;--navy:#07213a;--teal:#00cfc0;--blue:#3182ff;--red:#e53e3e;--muted:#7a9ab8;--border:#e2e8f0;--radius:12px;--orange:#ed8936}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI','Noto Sans KR',sans-serif;background:var(--bg);color:var(--navy);min-height:100vh}
 .top{background:linear-gradient(135deg,#07213a,#0a3d6e);color:#fff;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
@@ -16,8 +16,8 @@ body{font-family:'Segoe UI','Noto Sans KR',sans-serif;background:var(--bg);color
 .login-box h2{margin-bottom:20px;color:var(--navy)}
 .login-box input{width:100%;padding:12px;border:2px solid var(--border);border-radius:8px;font-size:15px;margin-bottom:12px}
 .login-box button{width:100%;padding:12px;background:var(--teal);border:none;border-radius:8px;color:#fff;font-size:15px;font-weight:700;cursor:pointer}
-.tabs{display:flex;gap:0;border-bottom:2px solid var(--border);background:#fff;padding:0 24px}
-.tab{padding:14px 20px;cursor:pointer;font-weight:600;font-size:14px;border-bottom:3px solid transparent;color:var(--muted);transition:.2s}
+.tabs{display:flex;gap:0;border-bottom:2px solid var(--border);background:#fff;padding:0 24px;overflow-x:auto}
+.tab{padding:14px 20px;cursor:pointer;font-weight:600;font-size:14px;border-bottom:3px solid transparent;color:var(--muted);transition:.2s;white-space:nowrap}
 .tab.active{color:var(--teal);border-bottom-color:var(--teal)}
 .tab:hover{color:var(--navy)}
 .panel{display:none;padding:20px 24px}
@@ -28,14 +28,16 @@ body{font-family:'Segoe UI','Noto Sans KR',sans-serif;background:var(--bg);color
 .btn-teal{background:var(--teal);color:#fff}
 .btn-blue{background:var(--blue);color:#fff}
 .btn-red{background:var(--red);color:#fff}
+.btn-orange{background:var(--orange);color:#fff}
 .btn-outline{background:transparent;border:2px solid var(--border);color:var(--navy)}
 .btn:hover{opacity:.85;transform:translateY(-1px)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
 table{width:100%;border-collapse:collapse;background:var(--card);border-radius:var(--radius);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.06)}
 th,td{padding:10px 14px;text-align:left;font-size:13px;border-bottom:1px solid var(--border)}
 th{background:#f8fafc;font-weight:700;color:var(--muted);font-size:12px;text-transform:uppercase;position:sticky;top:0}
 tr:hover td{background:#f7faff}
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:center;justify-content:center}
-.modal{background:#fff;border-radius:16px;padding:28px;width:90%;max-width:600px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal{background:#fff;border-radius:16px;padding:28px;width:90%;max-width:650px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
 .modal h3{margin-bottom:16px;font-size:17px}
 .form-group{margin-bottom:14px}
 .form-group label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:4px}
@@ -50,13 +52,23 @@ tr:hover td{background:#f7faff}
 .test-input input{flex:1;padding:12px;border:2px solid var(--border);border-radius:8px;font-size:15px}
 .result-card{background:#f8fafc;border-radius:10px;padding:14px;margin-bottom:10px;border-left:4px solid var(--teal)}
 .result-card .score{float:right;font-weight:700;color:var(--teal)}
-.toast{position:fixed;bottom:24px;right:24px;background:var(--navy);color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;z-index:300;animation:fadeIn .3s}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--navy);color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;z-index:300;animation:fadeIn .3s;max-width:400px}
 @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 .rel-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .rel-tag{background:rgba(49,130,255,.1);color:var(--blue);padding:3px 10px;border-radius:12px;font-size:12px;cursor:pointer}
 .rel-tag .x{margin-left:4px;color:var(--red);font-weight:700}
 .loading{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--teal);border-radius:50%;animation:spin .6s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+.tip-box{background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fbbf24;border-radius:10px;padding:14px 16px;margin-bottom:14px;font-size:13px;line-height:1.7}
+.tip-box b{color:#92400e}
+.tip-box .prompt{background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:8px 10px;margin:6px 0;font-size:12px;color:#374151;white-space:pre-wrap;cursor:pointer;position:relative}
+.tip-box .prompt:hover{background:#f0fdf4;border-color:var(--teal)}
+.tip-box .prompt::after{content:'클릭하면 복사';position:absolute;right:8px;top:8px;font-size:10px;color:var(--muted)}
+.upload-area{border:2px dashed var(--border);border-radius:10px;padding:20px;text-align:center;cursor:pointer;transition:.2s;margin:10px 0}
+.upload-area:hover{border-color:var(--teal);background:rgba(0,207,192,.04)}
+.upload-area input{display:none}
+.progress-bar{background:#eee;border-radius:4px;height:8px;margin:8px 0;overflow:hidden}
+.progress-bar .fill{background:var(--teal);height:100%;transition:width .3s;border-radius:4px}
 </style>
 </head>
 <body>
@@ -79,9 +91,9 @@ tr:hover td{background:#f7faff}
     </div>
   </div>
   <div class="tabs">
-    <div class="tab active" onclick="switchTab('faq')">FAQ 관리</div>
-    <div class="tab" onclick="switchTab('staff')">담당자 관리</div>
-    <div class="tab" onclick="switchTab('test')">테스트 콘솔</div>
+    <div class="tab active" data-tab="faq" onclick="switchTab('faq',this)">FAQ 관리</div>
+    <div class="tab" data-tab="staff" onclick="switchTab('staff',this)">담당자 관리</div>
+    <div class="tab" data-tab="test" onclick="switchTab('test',this)">테스트 콘솔</div>
   </div>
 
   <!-- FAQ 패널 -->
@@ -89,6 +101,9 @@ tr:hover td{background:#f7faff}
     <div class="toolbar">
       <input type="text" id="faqSearch" placeholder="FAQ 검색..." oninput="renderFaqs()">
       <button class="btn btn-teal" onclick="openFaqModal()">+ FAQ 추가</button>
+      <button class="btn btn-blue" onclick="downloadFaqCsv()">CSV 다운로드</button>
+      <button class="btn btn-orange" onclick="document.getElementById('faqUpload').click()">CSV 업로드</button>
+      <input type="file" id="faqUpload" accept=".csv" style="display:none" onchange="uploadFaqCsv(this)">
     </div>
     <div style="overflow-x:auto">
       <table><thead><tr><th>ID</th><th>제목</th><th>공감 한마디</th><th>꼬리질문</th><th>링크</th><th>관리</th></tr></thead>
@@ -101,6 +116,9 @@ tr:hover td{background:#f7faff}
     <div class="toolbar">
       <input type="text" id="staffSearch" placeholder="담당자 검색..." oninput="renderStaffs()">
       <button class="btn btn-teal" onclick="openStaffModal()">+ 담당자 추가</button>
+      <button class="btn btn-blue" onclick="downloadStaffCsv()">CSV 다운로드</button>
+      <button class="btn btn-orange" onclick="document.getElementById('staffUpload').click()">CSV 업로드</button>
+      <input type="file" id="staffUpload" accept=".csv" style="display:none" onchange="uploadStaffCsv(this)">
     </div>
     <div style="overflow-x:auto">
       <table><thead><tr><th>ID</th><th>부서</th><th>직책</th><th>이름</th><th>전화</th><th>키워드</th><th>관리</th></tr></thead>
@@ -112,11 +130,24 @@ tr:hover td{background:#f7faff}
   <div id="panel-test" class="panel">
     <div class="test-area">
       <h3>검색 테스트</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px">실제 사용자가 질문할 법한 문장을 입력하면 FAQ/담당자 매칭 결과와 유사도 점수를 확인할 수 있습니다.</p>
       <div class="test-input">
-        <input type="text" id="testQ" placeholder="질문을 입력하세요..." onkeydown="if(event.key==='Enter')doTest()">
+        <input type="text" id="testQ" placeholder="예: 책 반납이 늦었는데 연체료가 걱정돼요" onkeydown="if(event.key==='Enter')doTest()">
         <button class="btn btn-blue" onclick="doTest()">테스트</button>
       </div>
       <div id="testResult"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 업로드 진행 모달 -->
+<div id="uploadModal" style="display:none">
+  <div class="modal-bg">
+    <div class="modal" style="max-width:400px;text-align:center">
+      <h3 id="uploadTitle">업로드 중...</h3>
+      <p id="uploadStatus" style="margin:10px 0;font-size:14px;color:var(--muted)"></p>
+      <div class="progress-bar"><div class="fill" id="uploadProgress" style="width:0%"></div></div>
+      <p id="uploadDetail" style="font-size:12px;color:var(--muted);margin-top:8px"></p>
     </div>
   </div>
 </div>
@@ -133,7 +164,7 @@ let FAQS = [], COMMENTS = {}, RELATIONS = {}, STAFFS = [];
 // ── 로그인 ──
 function doLogin() {
   TOKEN = document.getElementById('pwInput').value;
-  api('GET','/admin/faqs').then(d => {
+  api('GET','/admin/faqs').then(function(d) {
     if (d.error) { toast('비밀번호가 틀렸습니다'); TOKEN=''; return; }
     FAQS = d.faqs || [];
     COMMENTS = d.comments || {};
@@ -142,239 +173,482 @@ function doLogin() {
     document.getElementById('mainWrap').style.display = 'block';
     renderFaqs();
     loadStaffs();
-  }).catch(() => { toast('연결 실패'); TOKEN=''; });
+  }).catch(function() { toast('연결 실패'); TOKEN=''; });
 }
 function doLogout() { TOKEN=''; location.reload(); }
 
 // ── API 호출 ──
-async function api(method, path, body) {
-  const opts = { method, headers: { 'Authorization':'Bearer '+TOKEN, 'Content-Type':'application/json' } };
+function api(method, path, body) {
+  var opts = { method: method, headers: { 'Authorization':'Bearer '+TOKEN, 'Content-Type':'application/json' } };
   if (body) opts.body = JSON.stringify(body);
-  const r = await fetch(API + path, opts);
-  return r.json();
+  return fetch(API + path, opts).then(function(r) { return r.json(); });
 }
 
 // ── 탭 전환 ──
-function switchTab(name) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  event.target.classList.add('active');
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+  document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('active'); });
+  if (el) el.classList.add('active');
   document.getElementById('panel-'+name).classList.add('active');
 }
 
 // ── FAQ 렌더링 ──
 function renderFaqs() {
-  const q = (document.getElementById('faqSearch').value||'').toLowerCase();
-  const filtered = FAQS.filter(f => !q || f.title.toLowerCase().includes(q) || f.id.includes(q));
-  const tb = document.getElementById('faqTable');
-  tb.innerHTML = filtered.map(f => {
-    const rels = (RELATIONS[f.id]||[]).map(r => '<span class="rel-tag">'+r+'</span>').join('');
-    const comment = COMMENTS[f.id] || '';
-    const link = f.link ? '<a href="'+esc(f.link)+'" target="_blank" style="font-size:12px">링크</a>' : '-';
+  var q = (document.getElementById('faqSearch').value||'').toLowerCase();
+  var filtered = FAQS.filter(function(f) { return !q || f.title.toLowerCase().includes(q) || f.id.includes(q); });
+  var tb = document.getElementById('faqTable');
+  tb.innerHTML = filtered.map(function(f) {
+    var rels = (RELATIONS[f.id]||[]).map(function(r) { return '<span class="rel-tag">'+r+'</span>'; }).join('');
+    var comment = COMMENTS[f.id] || '';
+    var link = f.link ? '<a href="'+esc(f.link)+'" target="_blank" style="font-size:12px">링크</a>' : '-';
     return '<tr><td><span class="badge badge-teal">'+f.id+'</span></td><td style="max-width:250px">'+esc(f.title)+'</td><td style="max-width:200px;font-size:12px;color:#666">'+esc(comment).slice(0,30)+'</td><td><div class="rel-tags">'+rels+'</div></td><td>'+link+'</td><td><button class="btn btn-outline" onclick="openFaqModal(\''+f.id+'\')">수정</button> <button class="btn btn-red" onclick="deleteFaq(\''+f.id+'\')">삭제</button></td></tr>';
   }).join('');
 }
 
+// ── AI 안내 팁 HTML ──
+var FAQ_TIP = '<div class="tip-box">'
+  +'<b>AI 활용 팁</b> - 아래 명령어를 복사해서 ChatGPT/Gemini/Claude에 붙여넣으면 형식에 맞는 내용을 받을 수 있어요!<br><br>'
+  +'<b>1. 제목 + 요약 한번에 만들기:</b>'
+  +'<div class="prompt" onclick="copyText(this)">'
+  +'종로도서관 AI 챗봇의 FAQ 항목을 만들어줘.\n'
+  +'주제: [여기에 주제 입력, 예: 북카페 운영안내]\n\n'
+  +'아래 형식으로 작성해줘:\n'
+  +'- 제목: 간결한 서비스명 (괄호로 부가설명)\n'
+  +'- 요약: 이용자에게 친근한 말투로 2~3문장, 구체적 정보(시간/장소/비용 등) 포함, 이모지 1개\n'
+  +'- 공감 한마디: 20자 이내, 따뜻한 톤, 이모지 1개\n\n'
+  +'예시:\n'
+  +'제목: 북카페 이용안내(지하1층 쉼터)\n'
+  +'요약: 지하 1층 인왕관 옆에 북카페가 있어요! 음료를 마시며 편하게 책을 읽을 수 있는 공간이에요.\n'
+  +'공감 한마디: 커피 한잔과 함께 독서 어때요? ☕</div>'
+  +'<b>2. 임베딩 보조 텍스트 만들기 (검색 정확도 향상):</b>'
+  +'<div class="prompt" onclick="copyText(this)">'
+  +'아래 FAQ 항목에 대해 사용자가 이 서비스를 찾을 때 쓸 수 있는 자연어 질문 5개를 만들어줘. 쉼표로 구분해줘.\n\n'
+  +'제목: [FAQ 제목]\n'
+  +'요약: [FAQ 요약]\n\n'
+  +'예시 출력: 카페 어디 있어요, 도서관에서 커피 마실 수 있나요, 쉴 곳이 있나요, 음료 반입 가능한가요, 휴게공간이 있어요?</div>'
+  +'<b>3. 꼬리질문도 AI에게:</b>'
+  +'<div class="prompt" onclick="copyText(this)">'
+  +'종로도서관 FAQ 목록에서 "[FAQ 제목]"과 가장 관련 있는 항목 3개를 골라줘.\n\n'
+  +'[현재 FAQ 목록을 여기에 붙여넣기]</div>'
+  +'</div>';
+
+var STAFF_TIP = '<div class="tip-box">'
+  +'<b>AI 활용 팁</b> - 담당자 정보를 AI에게 정리 요청하세요!<br><br>'
+  +'<b>키워드 자동 생성:</b>'
+  +'<div class="prompt" onclick="copyText(this)">'
+  +'아래 담당자 정보를 보고, 시민이 이 담당자를 찾을 때 쓸 수 있는 검색 키워드를 10~15개 만들어줘. 쉼표로 구분해줘.\n\n'
+  +'부서: [부서명]\n'
+  +'직책: [직책]\n'
+  +'담당업무: [업무 나열]\n\n'
+  +'예시: 입찰,계약,공사,정보공개,보안,국민신문고,민원,산업안전,물품</div>'
+  +'</div>';
+
 // ── FAQ 모달 ──
 function openFaqModal(id) {
-  const faq = id ? FAQS.find(f=>f.id===id) : null;
-  const isNew = !faq;
-  const comment = faq ? (COMMENTS[faq.id]||'') : '';
-  const rels = faq ? (RELATIONS[faq.id]||[]) : [];
-  const relOpts = FAQS.filter(f=>!faq||f.id!==faq.id).map(f=>'<option value="'+f.id+'">'+f.id+' - '+esc(f.title)+'</option>').join('');
+  var faq = id ? FAQS.find(function(f){return f.id===id;}) : null;
+  var isNew = !faq;
+  var comment = faq ? (COMMENTS[faq.id]||'') : '';
+  var rels = faq ? (RELATIONS[faq.id]||[]) : [];
+  var relOpts = FAQS.filter(function(f){return !faq||f.id!==faq.id;}).map(function(f){return '<option value="'+f.id+'">'+f.id+' - '+esc(f.title)+'</option>';}).join('');
 
   document.getElementById('modalContainer').innerHTML = '<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal">'
     +'<h3>'+(isNew?'FAQ 추가':'FAQ 수정 ('+id+')')+'</h3>'
-    +'<div class="form-group"><label>ID (예: q071)</label><input id="mFaqId" value="'+(faq?faq.id:nextFaqId())+'" '+(isNew?'':'readonly style="background:#f0f0f0"')+'></div>'
-    +'<div class="form-group"><label>제목</label><input id="mFaqTitle" value="'+esc(faq?faq.title:'')+'"></div>'
-    +'<div class="form-group"><label>요약 설명</label><textarea id="mFaqSummary">'+(faq?esc(faq.summary):'')+'</textarea></div>'
-    +'<div class="form-group"><label>링크 URL</label><input id="mFaqLink" value="'+esc(faq?faq.link||'':'')+'"></div>'
-    +'<div class="form-group"><label>공감 한마디</label><input id="mFaqComment" value="'+esc(comment)+'" placeholder="따뜻한 한마디 + 이모지"></div>'
-    +'<div class="form-group"><label>임베딩 보조 텍스트 (검색 정확도 향상용, 선택)</label><input id="mFaqEmbedText" value="'+esc(faq?faq.embedText||'':'')+'" placeholder="추가 키워드나 예상 질문들"></div>'
+    + FAQ_TIP
+    +'<div class="form-group"><label>ID (예: q071) - 자동 부여됨</label><input id="mFaqId" value="'+(faq?faq.id:nextFaqId())+'" '+(isNew?'':'readonly style="background:#f0f0f0"')+'></div>'
+    +'<div class="form-group"><label>제목 <span style="color:var(--muted);font-weight:400">- 간결한 서비스명 (괄호로 부가설명)</span></label><input id="mFaqTitle" value="'+esc(faq?faq.title:'')+'" placeholder="예: 북카페 이용안내(지하1층 쉼터)"></div>'
+    +'<div class="form-group"><label>요약 설명 <span style="color:var(--muted);font-weight:400">- 친근한 말투, 구체적 정보 포함</span></label><textarea id="mFaqSummary" placeholder="예: 지하 1층 인왕관 옆에 북카페가 있어요! 음료를 마시며 편하게 책을 읽을 수 있는 공간이에요.">'+(faq?esc(faq.summary):'')+'</textarea></div>'
+    +'<div class="form-group"><label>링크 URL <span style="color:var(--muted);font-weight:400">- 종로도서관 홈페이지 관련 페이지 주소</span></label><input id="mFaqLink" value="'+esc(faq?faq.link||'':'')+'" placeholder="https://jnlib.sen.go.kr/..."></div>'
+    +'<div class="form-group"><label>공감 한마디 <span style="color:var(--muted);font-weight:400">- 20자 이내, 따뜻한 톤 + 이모지</span></label><input id="mFaqComment" value="'+esc(comment)+'" placeholder="예: 커피 한잔과 함께 독서 어때요? ☕"></div>'
+    +'<div class="form-group"><label>임베딩 보조 텍스트 <span style="color:var(--muted);font-weight:400">- 예상 질문들을 쉼표로 나열하면 검색 정확도 UP!</span></label><input id="mFaqEmbedText" value="'+esc(faq?faq.embedText||'':'')+'" placeholder="예: 카페 어디 있어요, 도서관에서 커피 마실 수 있나요, 쉴 곳이 있나요"></div>'
     +'<div class="form-group"><label>꼬리질문 (연관 FAQ, 최대 3개)</label>'
     +'<select id="mRelSelect"><option value="">-- 선택 --</option>'+relOpts+'</select>'
     +'<button class="btn btn-outline" style="margin-top:6px" onclick="addRel()">추가</button>'
-    +'<div class="rel-tags" id="mRelTags" style="margin-top:8px">'+rels.map(r=>'<span class="rel-tag">'+r+' <span class="x" onclick="removeRel(\''+r+'\')">x</span></span>').join('')+'</div>'
+    +'<div class="rel-tags" id="mRelTags" style="margin-top:8px">'+rels.map(function(r){return '<span class="rel-tag">'+r+' <span class="x" onclick="removeRel(\''+r+'\')">x</span></span>';}).join('')+'</div>'
     +'<input type="hidden" id="mRels" value="'+rels.join(',')+'">'
     +'</div>'
     +'<div class="form-actions"><button class="btn btn-outline" onclick="closeModal()">취소</button><button class="btn btn-teal" onclick="saveFaq()" id="saveFaqBtn">저장 (임베딩 자동생성)</button></div>'
     +'</div></div>';
 }
 
-var _mRels = [];
 function addRel() {
-  const sel = document.getElementById('mRelSelect');
-  const v = sel.value; if(!v) return;
-  const cur = document.getElementById('mRels').value.split(',').filter(Boolean);
+  var sel = document.getElementById('mRelSelect');
+  var v = sel.value; if(!v) return;
+  var cur = document.getElementById('mRels').value.split(',').filter(Boolean);
   if(cur.length>=3){toast('최대 3개까지');return;}
   if(cur.includes(v)) return;
   cur.push(v);
   document.getElementById('mRels').value = cur.join(',');
-  document.getElementById('mRelTags').innerHTML = cur.map(r=>'<span class="rel-tag">'+r+' <span class="x" onclick="removeRel(\''+r+'\')">x</span></span>').join('');
+  document.getElementById('mRelTags').innerHTML = cur.map(function(r){return '<span class="rel-tag">'+r+' <span class="x" onclick="removeRel(\''+r+'\')">x</span></span>';}).join('');
   sel.value='';
 }
 function removeRel(id) {
-  let cur = document.getElementById('mRels').value.split(',').filter(Boolean);
-  cur = cur.filter(r=>r!==id);
+  var cur = document.getElementById('mRels').value.split(',').filter(Boolean);
+  cur = cur.filter(function(r){return r!==id;});
   document.getElementById('mRels').value = cur.join(',');
-  document.getElementById('mRelTags').innerHTML = cur.map(r=>'<span class="rel-tag">'+r+' <span class="x" onclick="removeRel(\''+r+'\')">x</span></span>').join('');
+  document.getElementById('mRelTags').innerHTML = cur.map(function(r){return '<span class="rel-tag">'+r+' <span class="x" onclick="removeRel(\''+r+'\')">x</span></span>';}).join('');
 }
 
-async function saveFaq() {
-  const btn = document.getElementById('saveFaqBtn');
+function saveFaq() {
+  var btn = document.getElementById('saveFaqBtn');
   btn.innerHTML = '<span class="loading"></span> 임베딩 생성 중...';
   btn.disabled = true;
 
-  const faq = {
+  var faq = {
     id: document.getElementById('mFaqId').value.trim(),
     title: document.getElementById('mFaqTitle').value.trim(),
     summary: document.getElementById('mFaqSummary').value.trim(),
     link: document.getElementById('mFaqLink').value.trim() || null,
     embedText: document.getElementById('mFaqEmbedText').value.trim(),
   };
-  const comment = document.getElementById('mFaqComment').value.trim();
-  const rels = document.getElementById('mRels').value.split(',').filter(Boolean);
+  var comment = document.getElementById('mFaqComment').value.trim();
+  var rels = document.getElementById('mRels').value.split(',').filter(Boolean);
 
-  const d = await api('POST','/admin/faq',{ faq, comment, relations: rels });
-  if(d.ok) {
-    toast('저장 완료! 임베딩 '+d.embeddingDim+'차원 생성됨');
-    const idx = FAQS.findIndex(f=>f.id===faq.id);
-    if(idx>=0) FAQS[idx]={...FAQS[idx],...faq}; else FAQS.push(faq);
-    COMMENTS[faq.id] = comment;
-    RELATIONS[faq.id] = rels;
-    renderFaqs();
-    closeModal();
-  } else {
-    toast('오류: '+(d.error||'알 수 없는 오류'));
-    btn.innerHTML = '저장 (임베딩 자동생성)';
-    btn.disabled = false;
-  }
+  api('POST','/admin/faq',{ faq: faq, comment: comment, relations: rels }).then(function(d) {
+    if(d.ok) {
+      toast('저장 완료! 임베딩 '+d.embeddingDim+'차원 생성됨');
+      var idx = FAQS.findIndex(function(f){return f.id===faq.id;});
+      if(idx>=0) { Object.assign(FAQS[idx], faq); } else { FAQS.push(faq); }
+      COMMENTS[faq.id] = comment;
+      RELATIONS[faq.id] = rels;
+      renderFaqs();
+      closeModal();
+    } else {
+      toast('오류: '+(d.error||'알 수 없는 오류'));
+      btn.innerHTML = '저장 (임베딩 자동생성)';
+      btn.disabled = false;
+    }
+  });
 }
 
-async function deleteFaq(id) {
+function deleteFaq(id) {
   if(!confirm(id+' FAQ를 삭제하시겠습니까?')) return;
-  const d = await api('DELETE','/admin/faq',{id});
-  if(d.ok) {
-    FAQS = FAQS.filter(f=>f.id!==id);
-    delete COMMENTS[id];
-    delete RELATIONS[id];
-    renderFaqs();
-    toast(id+' 삭제 완료');
-  }
+  api('DELETE','/admin/faq',{id:id}).then(function(d) {
+    if(d.ok) {
+      FAQS = FAQS.filter(function(f){return f.id!==id;});
+      delete COMMENTS[id];
+      delete RELATIONS[id];
+      renderFaqs();
+      toast(id+' 삭제 완료');
+    }
+  });
 }
 
 function nextFaqId() {
-  const nums = FAQS.map(f=>parseInt(f.id.replace('q',''))).filter(n=>!isNaN(n));
-  const next = Math.max(...nums,0)+1;
+  var nums = FAQS.map(function(f){return parseInt(f.id.replace('q',''));}).filter(function(n){return !isNaN(n);});
+  var next = Math.max.apply(null, nums.concat([0]))+1;
   return 'q'+String(next).padStart(3,'0');
 }
 
 // ── 담당자 ──
-async function loadStaffs() {
-  const d = await api('GET','/admin/staffs');
-  STAFFS = d.staffs || [];
-  renderStaffs();
+function loadStaffs() {
+  api('GET','/admin/staffs').then(function(d) {
+    STAFFS = d.staffs || [];
+    renderStaffs();
+  });
 }
 function renderStaffs() {
-  const q = (document.getElementById('staffSearch').value||'').toLowerCase();
-  const filtered = STAFFS.filter(s => !q || s.name.toLowerCase().includes(q) || s.dept.toLowerCase().includes(q) || s.keywords.toLowerCase().includes(q));
-  document.getElementById('staffTable').innerHTML = filtered.map(s =>
-    '<tr><td><span class="badge badge-blue">'+s.id+'</span></td><td>'+esc(s.dept)+'</td><td>'+esc(s.role)+'</td><td>'+esc(s.name)+'</td><td>02-'+esc(s.tel)+'</td><td style="max-width:200px;font-size:12px">'+esc(s.keywords)+'</td><td><button class="btn btn-outline" onclick="openStaffModal(\''+s.id+'\')">수정</button> <button class="btn btn-red" onclick="deleteStaff(\''+s.id+'\')">삭제</button></td></tr>'
-  ).join('');
+  var q = (document.getElementById('staffSearch').value||'').toLowerCase();
+  var filtered = STAFFS.filter(function(s) { return !q || s.name.toLowerCase().includes(q) || s.dept.toLowerCase().includes(q) || (s.keywords||'').toLowerCase().includes(q); });
+  document.getElementById('staffTable').innerHTML = filtered.map(function(s) {
+    return '<tr><td><span class="badge badge-blue">'+s.id+'</span></td><td>'+esc(s.dept)+'</td><td>'+esc(s.role)+'</td><td>'+esc(s.name)+'</td><td>02-'+esc(s.tel)+'</td><td style="max-width:200px;font-size:12px">'+esc(s.keywords)+'</td><td><button class="btn btn-outline" onclick="openStaffModal(\''+s.id+'\')">수정</button> <button class="btn btn-red" onclick="deleteStaff(\''+s.id+'\')">삭제</button></td></tr>';
+  }).join('');
 }
 function openStaffModal(id) {
-  const s = id ? STAFFS.find(x=>x.id===id) : null;
-  const isNew = !s;
+  var s = id ? STAFFS.find(function(x){return x.id===id;}) : null;
+  var isNew = !s;
   document.getElementById('modalContainer').innerHTML = '<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal">'
     +'<h3>'+(isNew?'담당자 추가':'담당자 수정 ('+id+')')+'</h3>'
+    + STAFF_TIP
     +'<div class="form-group"><label>ID (예: p024)</label><input id="mSId" value="'+(s?s.id:nextStaffId())+'" '+(isNew?'':'readonly style="background:#f0f0f0"')+'></div>'
-    +'<div class="form-group"><label>부서</label><input id="mSDept" value="'+esc(s?s.dept:'')+'"></div>'
-    +'<div class="form-group"><label>직책</label><input id="mSRole" value="'+esc(s?s.role:'')+'"></div>'
-    +'<div class="form-group"><label>이름</label><input id="mSName" value="'+esc(s?s.name:'')+'"></div>'
-    +'<div class="form-group"><label>전화 (721-XXXX)</label><input id="mSTel" value="'+esc(s?s.tel:'')+'"></div>'
-    +'<div class="form-group"><label>키워드 (쉼표 구분)</label><input id="mSKw" value="'+esc(s?s.keywords:'')+'"></div>'
-    +'<div class="form-group"><label>담당업무 (줄바꿈 구분)</label><textarea id="mSDuties">'+(s?(s.duties||[]).join('\\n'):'')+'</textarea></div>'
+    +'<div class="form-group"><label>부서</label><input id="mSDept" value="'+esc(s?s.dept:'')+'" placeholder="예: 정보서비스팀 어문학실"></div>'
+    +'<div class="form-group"><label>직책</label><input id="mSRole" value="'+esc(s?s.role:'')+'" placeholder="예: 주무관"></div>'
+    +'<div class="form-group"><label>이름 (표시명)</label><input id="mSName" value="'+esc(s?s.name:'')+'" placeholder="예: 어문학실 주무관(대출데스크)"></div>'
+    +'<div class="form-group"><label>전화 (721-XXXX)</label><input id="mSTel" value="'+esc(s?s.tel:'')+'" placeholder="예: 721-0719"></div>'
+    +'<div class="form-group"><label>키워드 <span style="color:var(--muted);font-weight:400">- 시민이 찾을 때 쓸 검색어, 쉼표 구분</span></label><input id="mSKw" value="'+esc(s?s.keywords:'')+'" placeholder="예: 대출,반납,연체,연체료,스마트도서관"></div>'
+    +'<div class="form-group"><label>담당업무 (한 줄에 하나씩)</label><textarea id="mSDuties" placeholder="통합대출데스크 총괄\n연체자료 관리\n어르신 택배 서비스">'+(s?(s.duties||[]).join('\n'):'')+'</textarea></div>'
     +'<div class="form-actions"><button class="btn btn-outline" onclick="closeModal()">취소</button><button class="btn btn-teal" onclick="saveStaff()" id="saveStaffBtn">저장 (임베딩 자동생성)</button></div>'
     +'</div></div>';
 }
-async function saveStaff() {
-  const btn = document.getElementById('saveStaffBtn');
+function saveStaff() {
+  var btn = document.getElementById('saveStaffBtn');
   btn.innerHTML = '<span class="loading"></span> 임베딩 생성 중...';
   btn.disabled = true;
-  const staff = {
+  var staff = {
     id: document.getElementById('mSId').value.trim(),
     dept: document.getElementById('mSDept').value.trim(),
     role: document.getElementById('mSRole').value.trim(),
     name: document.getElementById('mSName').value.trim(),
     tel: document.getElementById('mSTel').value.trim(),
     keywords: document.getElementById('mSKw').value.trim(),
-    duties: document.getElementById('mSDuties').value.split('\\n').map(s=>s.trim()).filter(Boolean),
+    duties: document.getElementById('mSDuties').value.split('\n').map(function(s){return s.trim();}).filter(Boolean),
   };
-  const d = await api('POST','/admin/staff',{staff});
-  if(d.ok) {
-    toast('저장 완료! 임베딩 '+d.embeddingDim+'차원 생성됨');
-    const idx = STAFFS.findIndex(x=>x.id===staff.id);
-    if(idx>=0) STAFFS[idx]={...STAFFS[idx],...staff}; else STAFFS.push(staff);
-    renderStaffs();
-    closeModal();
-  } else {
-    toast('오류: '+(d.error||''));
-    btn.innerHTML = '저장 (임베딩 자동생성)';
-    btn.disabled = false;
-  }
+  api('POST','/admin/staff',{staff:staff}).then(function(d) {
+    if(d.ok) {
+      toast('저장 완료! 임베딩 '+d.embeddingDim+'차원 생성됨');
+      var idx = STAFFS.findIndex(function(x){return x.id===staff.id;});
+      if(idx>=0) { Object.assign(STAFFS[idx], staff); } else { STAFFS.push(staff); }
+      renderStaffs();
+      closeModal();
+    } else {
+      toast('오류: '+(d.error||''));
+      btn.innerHTML = '저장 (임베딩 자동생성)';
+      btn.disabled = false;
+    }
+  });
 }
-async function deleteStaff(id) {
+function deleteStaff(id) {
   if(!confirm(id+' 담당자를 삭제하시겠습니까?')) return;
-  const d = await api('DELETE','/admin/staff',{id});
-  if(d.ok) { STAFFS=STAFFS.filter(s=>s.id!==id); renderStaffs(); toast(id+' 삭제 완료'); }
+  api('DELETE','/admin/staff',{id:id}).then(function(d) {
+    if(d.ok) { STAFFS=STAFFS.filter(function(s){return s.id!==id;}); renderStaffs(); toast(id+' 삭제 완료'); }
+  });
 }
 function nextStaffId() {
-  const nums = STAFFS.map(s=>parseInt(s.id.replace('p',''))).filter(n=>!isNaN(n));
-  return 'p'+String(Math.max(...nums,0)+1).padStart(3,'0');
+  var nums = STAFFS.map(function(s){return parseInt(s.id.replace('p',''));}).filter(function(n){return !isNaN(n);});
+  return 'p'+String(Math.max.apply(null, nums.concat([0]))+1).padStart(3,'0');
+}
+
+// ══════════════════════════════
+// CSV 다운로드 / 업로드
+// ══════════════════════════════
+
+function csvEsc(val) {
+  var s = String(val||'');
+  if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+
+function downloadFaqCsv() {
+  var header = 'id,제목,요약설명,링크,공감한마디,임베딩보조텍스트,꼬리질문1,꼬리질문2,꼬리질문3';
+  var rows = FAQS.map(function(f) {
+    var rels = RELATIONS[f.id] || [];
+    return [f.id, f.title, f.summary, f.link||'', COMMENTS[f.id]||'', f.embedText||'', rels[0]||'', rels[1]||'', rels[2]||''].map(csvEsc).join(',');
+  });
+  var csv = '\uFEFF' + header + '\n' + rows.join('\n');
+  downloadFile(csv, 'faq_data.csv', 'text/csv;charset=utf-8');
+  toast('FAQ CSV 다운로드 완료 ('+FAQS.length+'건)');
+}
+
+function downloadStaffCsv() {
+  var header = 'id,부서,직책,이름,전화,키워드,담당업무(|구분)';
+  var rows = STAFFS.map(function(s) {
+    return [s.id, s.dept, s.role, s.name, s.tel, s.keywords, (s.duties||[]).join('|')].map(csvEsc).join(',');
+  });
+  var csv = '\uFEFF' + header + '\n' + rows.join('\n');
+  downloadFile(csv, 'staff_data.csv', 'text/csv;charset=utf-8');
+  toast('담당자 CSV 다운로드 완료 ('+STAFFS.length+'건)');
+}
+
+function downloadFile(content, filename, type) {
+  var blob = new Blob([content], {type: type});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function parseCsv(text) {
+  var lines = [];
+  var current = '';
+  var inQuote = false;
+  for (var i = 0; i < text.length; i++) {
+    var ch = text[i];
+    if (ch === '"') {
+      if (inQuote && text[i+1] === '"') { current += '"'; i++; }
+      else { inQuote = !inQuote; }
+    } else if (ch === ',' && !inQuote) {
+      lines.push(current); current = '';
+    } else if ((ch === '\n' || ch === '\r') && !inQuote) {
+      if (ch === '\r' && text[i+1] === '\n') i++;
+      lines.push(current); current = '';
+      lines.push(null); // row separator
+    } else {
+      current += ch;
+    }
+  }
+  lines.push(current);
+  // split into rows
+  var rows = [[]];
+  for (var j = 0; j < lines.length; j++) {
+    if (lines[j] === null) { rows.push([]); }
+    else { rows[rows.length-1].push(lines[j]); }
+  }
+  return rows.filter(function(r) { return r.length > 1 || (r.length === 1 && r[0].trim()); });
+}
+
+function uploadFaqCsv(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var rows = parseCsv(e.target.result);
+    if (rows.length < 2) { toast('CSV에 데이터가 없습니다'); return; }
+    var data = rows.slice(1); // skip header
+    var total = data.length;
+    if (!confirm(total+'개 FAQ를 업로드합니다. 각 항목의 임베딩이 자동 생성됩니다. 진행하시겠습니까?')) {
+      input.value = ''; return;
+    }
+    showUploadProgress('FAQ 업로드 중', 0, total);
+    uploadFaqBatch(data, 0, total);
+  };
+  reader.readAsText(file, 'UTF-8');
+  input.value = '';
+}
+
+function uploadFaqBatch(data, idx, total) {
+  if (idx >= data.length) {
+    hideUploadProgress();
+    toast('FAQ 업로드 완료! '+total+'건 처리됨 (임베딩 모두 생성)');
+    api('GET','/admin/faqs').then(function(d) {
+      FAQS = d.faqs || [];
+      COMMENTS = d.comments || {};
+      RELATIONS = d.relations || {};
+      renderFaqs();
+    });
+    return;
+  }
+  var row = data[idx];
+  // id,제목,요약설명,링크,공감한마디,임베딩보조텍스트,꼬리질문1,꼬리질문2,꼬리질문3
+  var faq = {
+    id: (row[0]||'').trim(),
+    title: (row[1]||'').trim(),
+    summary: (row[2]||'').trim(),
+    link: (row[3]||'').trim() || null,
+    embedText: (row[5]||'').trim(),
+  };
+  var comment = (row[4]||'').trim();
+  var rels = [row[6],row[7],row[8]].map(function(r){return (r||'').trim();}).filter(Boolean);
+
+  if (!faq.id || !faq.title) {
+    updateUploadProgress(idx+1, data.length, faq.id + ' 건너뜀 (ID/제목 없음)');
+    uploadFaqBatch(data, idx+1, data.length);
+    return;
+  }
+  updateUploadProgress(idx+1, data.length, faq.id + ' ' + faq.title);
+  api('POST','/admin/faq',{faq:faq, comment:comment, relations:rels}).then(function() {
+    uploadFaqBatch(data, idx+1, data.length);
+  }).catch(function() {
+    updateUploadProgress(idx+1, data.length, faq.id + ' 오류 발생');
+    uploadFaqBatch(data, idx+1, data.length);
+  });
+}
+
+function uploadStaffCsv(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var rows = parseCsv(e.target.result);
+    if (rows.length < 2) { toast('CSV에 데이터가 없습니다'); return; }
+    var data = rows.slice(1);
+    var total = data.length;
+    if (!confirm(total+'명 담당자를 업로드합니다. 각 항목의 임베딩이 자동 생성됩니다. 진행하시겠습니까?')) {
+      input.value = ''; return;
+    }
+    showUploadProgress('담당자 업로드 중', 0, total);
+    uploadStaffBatch(data, 0, total);
+  };
+  reader.readAsText(file, 'UTF-8');
+  input.value = '';
+}
+
+function uploadStaffBatch(data, idx, total) {
+  if (idx >= data.length) {
+    hideUploadProgress();
+    toast('담당자 업로드 완료! '+total+'명 처리됨 (임베딩 모두 생성)');
+    loadStaffs();
+    return;
+  }
+  var row = data[idx];
+  // id,부서,직책,이름,전화,키워드,담당업무(|구분)
+  var staff = {
+    id: (row[0]||'').trim(),
+    dept: (row[1]||'').trim(),
+    role: (row[2]||'').trim(),
+    name: (row[3]||'').trim(),
+    tel: (row[4]||'').trim(),
+    keywords: (row[5]||'').trim(),
+    duties: (row[6]||'').split('|').map(function(s){return s.trim();}).filter(Boolean),
+  };
+  if (!staff.id || !staff.name) {
+    updateUploadProgress(idx+1, data.length, staff.id + ' 건너뜀');
+    uploadStaffBatch(data, idx+1, data.length);
+    return;
+  }
+  updateUploadProgress(idx+1, data.length, staff.id + ' ' + staff.name);
+  api('POST','/admin/staff',{staff:staff}).then(function() {
+    uploadStaffBatch(data, idx+1, data.length);
+  }).catch(function() {
+    uploadStaffBatch(data, idx+1, data.length);
+  });
+}
+
+function showUploadProgress(title, current, total) {
+  document.getElementById('uploadModal').style.display = 'block';
+  document.getElementById('uploadTitle').textContent = title;
+  updateUploadProgress(current, total, '준비 중...');
+}
+function updateUploadProgress(current, total, detail) {
+  var pct = Math.round((current/total)*100);
+  document.getElementById('uploadStatus').textContent = current + ' / ' + total + ' (' + pct + '%)';
+  document.getElementById('uploadProgress').style.width = pct + '%';
+  document.getElementById('uploadDetail').textContent = detail || '';
+}
+function hideUploadProgress() {
+  document.getElementById('uploadModal').style.display = 'none';
 }
 
 // ── 테스트 콘솔 ──
-async function doTest() {
-  const q = document.getElementById('testQ').value.trim();
+function doTest() {
+  var q = document.getElementById('testQ').value.trim();
   if(!q) return;
-  document.getElementById('testResult').innerHTML = '<div class="loading"></div> 검색 중...';
-  const d = await api('POST','/admin/test',{question:q});
-  if(d.error) { document.getElementById('testResult').innerHTML = '<div style="color:red">'+d.error+'</div>'; return; }
-  let html = '<h4 style="margin:10px 0">FAQ 매칭 Top 5</h4>';
-  (d.faqTop5||[]).forEach((r,i) => {
-    const pct = Math.round(r.score*100);
-    const bar = '<div style="background:linear-gradient(90deg,var(--teal) '+pct+'%,#eee '+pct+'%);height:6px;border-radius:3px;margin-top:4px"></div>';
-    html += '<div class="result-card"><span class="score">'+r.score+'</span><strong>'+r.id+'</strong> '+esc(r.title)+bar+'</div>';
+  document.getElementById('testResult').innerHTML = '<span class="loading"></span> 검색 중...';
+  api('POST','/admin/test',{question:q}).then(function(d) {
+    if(d.error) { document.getElementById('testResult').innerHTML = '<div style="color:red">'+esc(d.error)+'</div>'; return; }
+    var html = '<h4 style="margin:10px 0">FAQ 매칭 Top 5</h4>';
+    (d.faqTop5||[]).forEach(function(r) {
+      var pct = Math.round(r.score*100);
+      var bar = '<div style="background:linear-gradient(90deg,var(--teal) '+pct+'%,#eee '+pct+'%);height:6px;border-radius:3px;margin-top:4px"></div>';
+      html += '<div class="result-card"><span class="score">'+r.score+'</span><strong>'+r.id+'</strong> '+esc(r.title)+bar+'</div>';
+    });
+    html += '<h4 style="margin:16px 0 10px">담당자 매칭 Top 3</h4>';
+    (d.staffTop3||[]).forEach(function(r) {
+      html += '<div class="result-card" style="border-left-color:var(--blue)"><span class="score">'+r.score+'</span><strong>'+r.id+'</strong> '+esc(r.name)+'</div>';
+    });
+    document.getElementById('testResult').innerHTML = html;
   });
-  html += '<h4 style="margin:16px 0 10px">담당자 매칭 Top 3</h4>';
-  (d.staffTop3||[]).forEach(r => {
-    html += '<div class="result-card" style="border-left-color:var(--blue)"><span class="score">'+r.score+'</span><strong>'+r.id+'</strong> '+esc(r.name)+'</div>';
-  });
-  document.getElementById('testResult').innerHTML = html;
 }
 
 // ── 마이그레이션 ──
-async function doMigrate() {
+function doMigrate() {
   if(!confirm('기존 코드 데이터를 KV로 마이그레이션합니다. 현재 KV 데이터가 덮어씌워집니다. 진행하시겠습니까?')) return;
   toast('마이그레이션 진행 중...');
-  const d = await api('POST','/admin/migrate');
-  if(d.ok) {
-    toast('마이그레이션 완료! FAQ '+d.faqs+'개, 담당자 '+d.staffs+'개');
-    location.reload();
-  } else {
-    toast('오류: '+(d.error||''));
-  }
+  api('POST','/admin/migrate',{}).then(function(d) {
+    if(d.ok) {
+      toast('마이그레이션 완료! FAQ '+d.faqs+'개, 담당자 '+d.staffs+'개');
+      location.reload();
+    } else {
+      toast('오류: '+(d.error||''));
+    }
+  });
 }
 
 // ── 유틸 ──
 function closeModal() { document.getElementById('modalContainer').innerHTML = ''; }
 function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function toast(msg) {
-  const d = document.createElement('div');
+  var d = document.createElement('div');
   d.className = 'toast';
   d.textContent = msg;
   document.getElementById('toastContainer').appendChild(d);
-  setTimeout(() => d.remove(), 3000);
+  setTimeout(function() { d.remove(); }, 3000);
+}
+function copyText(el) {
+  var text = el.innerText.replace('클릭하면 복사', '').trim();
+  navigator.clipboard.writeText(text).then(function() { toast('클립보드에 복사됨!'); });
 }
 </script>
 </body>
