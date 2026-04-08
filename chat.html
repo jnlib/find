@@ -442,7 +442,7 @@ function addAIResult(empathy, cardsHtml, faqId) {
 
       var cw = document.createElement('div');
       cw.className = 'fadein';
-      cw.appendChild(tmp.firstChild || tmp);
+      while (tmp.firstChild) cw.appendChild(tmp.firstChild);
       bbl.appendChild(cw);
       scrollB();
 
