@@ -109,11 +109,29 @@ async function logMatchFail(env, data) {
   } catch(e) { /* silent */ }
 }
 
+// ── 개인정보 마스킹 (로그 저장 직전) ──
+function maskPII(text) {
+  if (!text) return text;
+  return String(text)
+    // 전화번호: 010-1234-5678, 01012345678, 010 1234 5678 등
+    .replace(/01[016-9][-\s]?\d{3,4}[-\s]?\d{4}/g, '010-****-****')
+    // 일반 지역번호 전화 02-xxx-xxxx
+    .replace(/0\d{1,2}[-\s]?\d{3,4}[-\s]?\d{4}/g, '0**-****-****')
+    // 주민등록번호 6-7자리
+    .replace(/\d{6}[-\s]\d{7}/g, '******-*******')
+    // 이메일 (선택)
+    .replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, '***@***.***');
+}
+
 // ── 매칭 성공 로그 (인기 랭킹용) ──
-async function logMatchSuccess(env, faqId, staffId) {
+async function logMatchSuccess(env, faqId, staffId, question) {
   try {
     if (!env.SUPABASE_URL || !env.SUPABASE_KEY) return;
     if (!faqId && !staffId) return;
+    // 질문 텍스트: 100자 컷 + PII 마스킹
+    let q = question ? maskPII(String(question)).slice(0, 100) : null;
+    // __direct__/__faq__ 토큰은 저장 안 함
+    if (q && (q.startsWith('__direct__') || q.startsWith('__faq__'))) q = '(꼬리질문 클릭)';
     await fetch(env.SUPABASE_URL + '/rest/v1/findjnlib_matches', {
       method: 'POST',
       headers: {
@@ -121,7 +139,7 @@ async function logMatchSuccess(env, faqId, staffId) {
         'Authorization': 'Bearer ' + env.SUPABASE_KEY,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ faq_id: faqId || null, staff_id: staffId || null })
+      body: JSON.stringify({ faq_id: faqId || null, staff_id: staffId || null, question: q })
     });
   } catch(e) { /* silent */ }
 }
@@ -215,7 +233,7 @@ async function handleSearch(request, env, staffOnly) {
     const faqs = await kvGet(env.FINDJNLIB_KV, 'faqs') || [];
     const faq = faqs.find(c => c.id === faqId);
     // 꼬리질문 클릭도 매칭 성공으로 카운트
-    if (faq) await logMatchSuccess(env, faq.id, null);
+    if (faq) await logMatchSuccess(env, faq.id, null, question);
     return jsonRes({
       staff: null,
       faq: faq ? { id:faq.id, title:faq.title, summary:faq.summary, link:faq.link } : null
@@ -239,7 +257,7 @@ async function handleSearch(request, env, staffOnly) {
     const match = findBestMatch(queryVec, staffEmbeddings, 0.3);
     if (!match) return jsonRes({ found: false });
     const staff = staffs.find(c => c.id === match.id);
-    if (staff) await logMatchSuccess(env, null, staff.id);
+    if (staff) await logMatchSuccess(env, null, staff.id, question);
     return jsonRes({ found: true, staff: staff ? { id:staff.id, dept:staff.dept, role:staff.role, name:staff.name, tel:staff.tel, duties:staff.duties } : null });
   }
 
@@ -272,7 +290,7 @@ async function handleSearch(request, env, staffOnly) {
   }
 
   // 매칭 성공 로그 (인기 랭킹 집계용) — 임계치 0.3 이상만 기록
-  await logMatchSuccess(env, faq ? faq.id : null, staff ? staff.id : null);
+  await logMatchSuccess(env, faq ? faq.id : null, staff ? staff.id : null, question);
 
   return jsonRes({
     staff: staff ? { id:staff.id, dept:staff.dept, role:staff.role, name:staff.name, tel:staff.tel, duties:staff.duties } : null,
@@ -449,6 +467,40 @@ async function handleAdmin(request, env, path) {
     const res = await fetch(SB + qstr, { headers: hdrs });
     const rows = await res.json();
     return jsonRes({ rows: Array.isArray(rows) ? rows : [], count: Array.isArray(rows) ? rows.length : 0 });
+  }
+
+  // ── 매칭 성공 내역 상세 (드릴다운) ──
+  // GET /admin/matches?faq_id=X | staff_id=Y [&from=&to=&limit=200]
+  if (path === '/admin/matches' && method === 'GET') {
+    const url = new URL(request.url);
+    const faqId = url.searchParams.get('faq_id');
+    const staffId = url.searchParams.get('staff_id');
+    const from = url.searchParams.get('from');
+    const to = url.searchParams.get('to');
+    const limit = Math.min(parseInt(url.searchParams.get('limit') || '200', 10) || 200, 1000);
+    if (!faqId && !staffId) return jsonRes({ error: 'faq_id 또는 staff_id 필요' }, 400);
+    const SB = env.SUPABASE_URL + '/rest/v1/findjnlib_matches';
+    const hdrs = { 'apikey': env.SUPABASE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_KEY };
+    let qstr = '?select=id,question,faq_id,staff_id,created_at&order=created_at.desc&limit=' + limit;
+    if (faqId) qstr += '&faq_id=eq.' + encodeURIComponent(faqId);
+    if (staffId) qstr += '&staff_id=eq.' + encodeURIComponent(staffId);
+    if (from) qstr += '&created_at=gte.' + encodeURIComponent(from + 'T00:00:00Z');
+    if (to)   qstr += '&created_at=lte.' + encodeURIComponent(to + 'T23:59:59.999Z');
+    const res = await fetch(SB + qstr, { headers: hdrs });
+    const rows = await res.json();
+    return jsonRes({ rows: Array.isArray(rows) ? rows : [], count: Array.isArray(rows) ? rows.length : 0 });
+  }
+
+  // ── 매칭 기록 개별 삭제 (개인정보 의심 등) ──
+  if (path === '/admin/matches' && method === 'DELETE') {
+    const url = new URL(request.url);
+    const id = url.searchParams.get('id');
+    if (!id) return jsonRes({ error: 'id 필요' }, 400);
+    await fetch(env.SUPABASE_URL + '/rest/v1/findjnlib_matches?id=eq.' + encodeURIComponent(id), {
+      method: 'DELETE',
+      headers: { 'apikey': env.SUPABASE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_KEY }
+    });
+    return jsonRes({ ok: true });
   }
 
   // ── 인기 FAQ/담당자 랭킹 ──

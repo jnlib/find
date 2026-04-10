@@ -346,7 +346,9 @@ function renderFaqs() {
     var link = f.link ? '<a href="'+esc(f.link)+'" target="_blank" style="font-size:12px">링크</a>' : '-';
     var cnt = FAQ_COUNTS[f.id] || 0;
     var cntColor = cnt >= 50 ? '#ed8936' : (cnt >= 10 ? '#3182ff' : (cnt > 0 ? '#38a169' : '#cbd5e0'));
-    var cntBadge = '<span title="전체 누적 매칭 수" style="display:inline-block;background:'+cntColor+';color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700">📊 '+fmt(cnt)+'</span>';
+    var cntBadge = cnt > 0
+      ? '<span title="클릭하면 매칭된 질문 내역 표시" style="cursor:pointer;display:inline-block;background:'+cntColor+';color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700" onclick="event.stopPropagation();openMatchDetail(\'faq\',\''+f.id+'\')">📊 '+fmt(cnt)+' 🔍</span>'
+      : '<span style="display:inline-block;background:'+cntColor+';color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700">📊 0</span>';
     return '<tr><td><span class="badge badge-teal">'+f.id+'</span></td><td style="max-width:250px">'+esc(f.title)+'</td><td>'+cntBadge+'</td><td style="max-width:200px;font-size:12px;color:#666">'+esc(comment).slice(0,30)+'</td><td><div class="rel-tags">'+rels+'</div></td><td>'+link+'</td><td><button class="btn btn-outline" onclick="openFaqModal(\''+f.id+'\')">수정</button> <button class="btn btn-red" onclick="deleteFaq(\''+f.id+'\')">삭제</button></td></tr>';
   }).join('');
 }
@@ -515,7 +517,9 @@ function renderStaffs() {
   document.getElementById('staffTable').innerHTML = filtered.map(function(s) {
     var cnt = STAFF_COUNTS[s.id] || 0;
     var cntColor = cnt >= 50 ? '#ed8936' : (cnt >= 10 ? '#3182ff' : (cnt > 0 ? '#38a169' : '#cbd5e0'));
-    var cntBadge = '<span title="전체 누적 매칭 수" style="display:inline-block;background:'+cntColor+';color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700">📊 '+fmt(cnt)+'</span>';
+    var cntBadge = cnt > 0
+      ? '<span title="클릭하면 매칭된 질문 내역 표시" style="cursor:pointer;display:inline-block;background:'+cntColor+';color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700" onclick="event.stopPropagation();openMatchDetail(\'staff\',\''+s.id+'\')">📊 '+fmt(cnt)+' 🔍</span>'
+      : '<span style="display:inline-block;background:'+cntColor+';color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700">📊 0</span>';
     return '<tr><td><span class="badge badge-blue">'+s.id+'</span></td><td>'+esc(s.dept)+'</td><td>'+esc(s.role)+'</td><td>'+esc(s.name)+'</td><td>'+cntBadge+'</td><td>02-'+esc(s.tel)+'</td><td style="max-width:200px;font-size:12px">'+esc(s.keywords)+'</td><td><button class="btn btn-outline" onclick="openStaffModal(\''+s.id+'\')">수정</button> <button class="btn btn-red" onclick="deleteStaff(\''+s.id+'\')">삭제</button></td></tr>';
   }).join('');
 }
@@ -868,13 +872,13 @@ function renderRanking(d) {
       var barW = Math.max(2, Math.round((r.count / maxFaq) * 100));
       var rank = i + 1;
       var rankColor = rank === 1 ? '#ed8936' : (rank === 2 ? '#a0aec0' : (rank === 3 ? '#c08457' : '#cbd5e0'));
-      html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:6px;border-radius:6px" onmouseover="this.style.background=\'#f7f9ff\'" onmouseout="this.style.background=\'transparent\'">'
+      html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:6px;border-radius:6px;cursor:pointer" onmouseover="this.style.background=\'#f7f9ff\'" onmouseout="this.style.background=\'transparent\'" onclick="openMatchDetail(\'faq\',\''+esc(r.id)+'\')" title="클릭하면 이 FAQ에 매칭된 질문 내역 표시">'
         + '<div style="width:28px;text-align:center;font-weight:900;color:'+rankColor+';font-size:14px">'+rank+'</div>'
         + '<div style="width:50px;font-size:11px;color:var(--muted);font-family:monospace">'+esc(r.id)+'</div>'
         + '<div style="flex:1;min-width:120px;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+esc(title)+'">'+esc(title)+'</div>'
         + '<div style="flex:2;background:#f0f0f0;border-radius:4px;height:18px;overflow:hidden;min-width:80px">'
         + '<div style="width:'+barW+'%;height:100%;background:linear-gradient(90deg,#00cfc0,#3182ff);border-radius:4px;transition:width .5s"></div></div>'
-        + '<div style="width:100px;text-align:right;font-size:12px;font-weight:700">'+fmt(r.count)+'건 <span style="color:var(--muted);font-weight:400">('+pct+'%)</span></div>'
+        + '<div style="width:120px;text-align:right;font-size:12px;font-weight:700">'+fmt(r.count)+'건 <span style="color:var(--muted);font-weight:400">('+pct+'%)</span> <span style="color:#3182ff">🔍</span></div>'
         + '</div>';
     });
     document.getElementById('rankFaqChart').innerHTML = html;
@@ -893,17 +897,102 @@ function renderRanking(d) {
       var barW = Math.max(2, Math.round((r.count / maxStaff) * 100));
       var rank = i + 1;
       var rankColor = rank === 1 ? '#ed8936' : (rank === 2 ? '#a0aec0' : (rank === 3 ? '#c08457' : '#cbd5e0'));
-      html2 += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:6px;border-radius:6px" onmouseover="this.style.background=\'#f7f9ff\'" onmouseout="this.style.background=\'transparent\'">'
+      html2 += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:6px;border-radius:6px;cursor:pointer" onmouseover="this.style.background=\'#f7f9ff\'" onmouseout="this.style.background=\'transparent\'" onclick="openMatchDetail(\'staff\',\''+esc(r.id)+'\')" title="클릭하면 이 담당자에게 매칭된 질문 내역 표시">'
         + '<div style="width:28px;text-align:center;font-weight:900;color:'+rankColor+';font-size:14px">'+rank+'</div>'
         + '<div style="width:50px;font-size:11px;color:var(--muted);font-family:monospace">'+esc(r.id)+'</div>'
         + '<div style="flex:1;min-width:120px;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+esc(name)+'">'+esc(name)+'</div>'
         + '<div style="flex:2;background:#f0f0f0;border-radius:4px;height:18px;overflow:hidden;min-width:80px">'
         + '<div style="width:'+barW+'%;height:100%;background:linear-gradient(90deg,#9f7aea,#ed64a6);border-radius:4px;transition:width .5s"></div></div>'
-        + '<div style="width:100px;text-align:right;font-size:12px;font-weight:700">'+fmt(r.count)+'건 <span style="color:var(--muted);font-weight:400">('+pct+'%)</span></div>'
+        + '<div style="width:120px;text-align:right;font-size:12px;font-weight:700">'+fmt(r.count)+'건 <span style="color:var(--muted);font-weight:400">('+pct+'%)</span> <span style="color:#3182ff">🔍</span></div>'
         + '</div>';
     });
     document.getElementById('rankStaffChart').innerHTML = html2;
   }
+}
+
+// ── 매칭 내역 드릴다운 모달 ──
+function openMatchDetail(kind, id) {
+  var rng = getStatsRange();
+  var qs = rng ? rng + '&' : '?';
+  qs += (kind === 'faq' ? 'faq_id=' : 'staff_id=') + encodeURIComponent(id);
+  var title = '';
+  if (kind === 'faq') {
+    var f = (FAQS || []).find(function(x) { return x.id === id; });
+    title = '📈 FAQ 매칭 내역 — ' + id + (f ? ' · ' + f.title : '');
+  } else {
+    var s = (STAFFS || []).find(function(x) { return x.id === id; });
+    title = '👤 담당자 매칭 내역 — ' + id + (s ? ' · ' + (s.name || s.role || '') : '');
+  }
+  document.getElementById('modalContainer').innerHTML = '<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal" style="max-width:900px">'
+    + '<h3>'+esc(title)+'</h3>'
+    + '<div style="font-size:12px;color:var(--muted);margin-bottom:10px;padding:8px 12px;background:#fff8e1;border-left:3px solid #ed8936;border-radius:4px">'
+    + '⚠️ 질문 원문이 표시됩니다. 전화번호/주민번호/이메일은 자동 마스킹되지만 기타 개인정보가 보이면 "삭제" 버튼으로 제거해주세요.'
+    + '</div>'
+    + '<div style="display:flex;gap:10px;margin-bottom:10px;align-items:center">'
+    + '<input type="text" id="matchDetailSearch" placeholder="질문 검색..." oninput="filterMatchDetail()" style="flex:1;padding:8px;border:1px solid #dde8f8;border-radius:6px">'
+    + '<button class="btn btn-teal" onclick="downloadMatchDetailCsv(\''+kind+'\',\''+id+'\')">CSV 다운로드</button>'
+    + '<span id="matchDetailCount" style="font-size:12px;color:var(--muted)"></span>'
+    + '</div>'
+    + '<div id="matchDetailList" style="max-height:500px;overflow-y:auto;border:1px solid #eef2f8;border-radius:6px;padding:4px">로딩 중...</div>'
+    + '<div class="form-actions" style="margin-top:14px"><button class="btn btn-outline" onclick="closeModal()">닫기</button></div>'
+    + '</div></div>';
+
+  api('GET', '/admin/matches' + qs + '&limit=500').then(function(d) {
+    if (d.error) { document.getElementById('matchDetailList').innerHTML = '<div style="color:#e53e3e;padding:16px">'+d.error+'</div>'; return; }
+    MATCH_DETAIL_ROWS = d.rows || [];
+    renderMatchDetail();
+  });
+}
+
+var MATCH_DETAIL_ROWS = [];
+function renderMatchDetail() {
+  var q = (document.getElementById('matchDetailSearch').value || '').toLowerCase();
+  var filtered = MATCH_DETAIL_ROWS.filter(function(r) {
+    return !q || (r.question || '').toLowerCase().indexOf(q) >= 0;
+  });
+  document.getElementById('matchDetailCount').textContent = '총 ' + filtered.length + '건';
+  var container = document.getElementById('matchDetailList');
+  if (!filtered.length) {
+    container.innerHTML = '<div style="text-align:center;color:var(--muted);padding:30px">질문 내역이 없습니다.<br><span style="font-size:11px">(기능 배포 이전 매칭은 질문 원문이 저장되지 않았어요)</span></div>';
+    return;
+  }
+  container.innerHTML = filtered.map(function(r) {
+    var kst = new Date(r.created_at);
+    var kstStr = new Date(kst.getTime() + 9*3600*1000).toISOString().replace('T',' ').slice(5,16);
+    var qText = r.question ? esc(r.question) : '<span style="color:var(--muted);font-style:italic">(저장 안됨)</span>';
+    return '<div style="display:flex;gap:10px;padding:10px;border-bottom:1px solid #eef2f8;align-items:center">'
+      + '<div style="width:95px;font-size:11px;color:var(--muted);white-space:nowrap">'+kstStr+'</div>'
+      + '<div style="flex:1;font-size:13px;line-height:1.5">'+qText+'</div>'
+      + '<button class="btn btn-red" style="padding:4px 10px;font-size:11px" onclick="deleteMatchRow('+r.id+')">삭제</button>'
+      + '</div>';
+  }).join('');
+}
+
+function filterMatchDetail() { renderMatchDetail(); }
+
+function deleteMatchRow(id) {
+  if (!confirm('이 매칭 기록을 삭제하시겠습니까? (개인정보 의심 등)')) return;
+  api('DELETE', '/admin/matches?id=' + id).then(function(d) {
+    if (d.ok) {
+      MATCH_DETAIL_ROWS = MATCH_DETAIL_ROWS.filter(function(r) { return r.id !== id; });
+      renderMatchDetail();
+      toast('삭제 완료');
+    } else toast('오류: ' + (d.error || ''));
+  });
+}
+
+function downloadMatchDetailCsv(kind, id) {
+  if (!MATCH_DETAIL_ROWS.length) { toast('데이터가 없습니다'); return; }
+  var header = ['ID','발생시각(KST)','질문(마스킹됨)'];
+  var lines = [header.join(',')];
+  MATCH_DETAIL_ROWS.forEach(function(r) {
+    var kst = new Date(r.created_at);
+    var kstStr = new Date(kst.getTime() + 9*3600*1000).toISOString().replace('T',' ').slice(0,19);
+    lines.push([r.id, kstStr, r.question || ''].map(csvEscape).join(','));
+  });
+  var blob = new Blob(['\ufeff' + lines.join('\r\n')], {type:'text/csv;charset=utf-8'});
+  downloadBlob(blob, 'findjnlib_matches_' + kind + '_' + id + '.csv');
+  toast('다운로드 완료 (' + MATCH_DETAIL_ROWS.length + '건)');
 }
 
 function downloadRankingCsv(kind) {
