@@ -97,7 +97,7 @@ function findTopCandidate(queryVec, embeddings) {
 async function logMatchFail(env, data) {
   try {
     if (!env.SUPABASE_URL || !env.SUPABASE_KEY) return;
-    await fetch(env.SUPABASE_URL + '/rest/v1/findjnlib_fails', {
+    await fetch(env.SUPABASE_URL + '/rest/v1/faq_fails', {
       method: 'POST',
       headers: {
         'apikey': env.SUPABASE_KEY,
@@ -132,7 +132,7 @@ async function logMatchSuccess(env, faqId, staffId, question) {
     let q = question ? maskPII(String(question)).slice(0, 100) : null;
     // __direct__/__faq__ 토큰은 저장 안 함
     if (q && (q.startsWith('__direct__') || q.startsWith('__faq__'))) q = '(꼬리질문 클릭)';
-    await fetch(env.SUPABASE_URL + '/rest/v1/findjnlib_matches', {
+    await fetch(env.SUPABASE_URL + '/rest/v1/faq_matches', {
       method: 'POST',
       headers: {
         'apikey': env.SUPABASE_KEY,
@@ -178,7 +178,7 @@ export default {
         const type = body.type || (body.score ? 'satisfaction' : 'visit');
         const row = { type };
         if (type === 'satisfaction' && body.score >= 1 && body.score <= 5) row.score = body.score;
-        await fetch(env.SUPABASE_URL + '/rest/v1/findjnlib_stats', {
+        await fetch(env.SUPABASE_URL + '/rest/v1/faq_stats', {
           method: 'POST',
           headers: { 'apikey': env.SUPABASE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_KEY, 'Content-Type': 'application/json' },
           body: JSON.stringify(row)
@@ -412,7 +412,7 @@ async function handleAdmin(request, env, path) {
     const from = url.searchParams.get('from'); // YYYY-MM-DD
     const to = url.searchParams.get('to');     // YYYY-MM-DD (inclusive)
 
-    const SB = env.SUPABASE_URL + '/rest/v1/findjnlib_stats';
+    const SB = env.SUPABASE_URL + '/rest/v1/faq_stats';
     const hdrs = { 'apikey': env.SUPABASE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_KEY };
 
     let qstr = '?select=type,score,created_at&order=created_at.asc';
@@ -459,7 +459,7 @@ async function handleAdmin(request, env, path) {
     const url = new URL(request.url);
     const from = url.searchParams.get('from');
     const to = url.searchParams.get('to');
-    const SB = env.SUPABASE_URL + '/rest/v1/findjnlib_stats';
+    const SB = env.SUPABASE_URL + '/rest/v1/faq_stats';
     const hdrs = { 'apikey': env.SUPABASE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_KEY };
     let qstr = '?select=id,type,score,created_at&order=created_at.desc';
     if (from) qstr += '&created_at=gte.' + encodeURIComponent(from + 'T00:00:00Z');
@@ -479,7 +479,7 @@ async function handleAdmin(request, env, path) {
     const to = url.searchParams.get('to');
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '200', 10) || 200, 1000);
     if (!faqId && !staffId) return jsonRes({ error: 'faq_id 또는 staff_id 필요' }, 400);
-    const SB = env.SUPABASE_URL + '/rest/v1/findjnlib_matches';
+    const SB = env.SUPABASE_URL + '/rest/v1/faq_matches';
     const hdrs = { 'apikey': env.SUPABASE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_KEY };
     let qstr = '?select=id,question,faq_id,staff_id,created_at&order=created_at.desc&limit=' + limit;
     if (faqId) qstr += '&faq_id=eq.' + encodeURIComponent(faqId);
@@ -496,7 +496,7 @@ async function handleAdmin(request, env, path) {
     const url = new URL(request.url);
     const id = url.searchParams.get('id');
     if (!id) return jsonRes({ error: 'id 필요' }, 400);
-    await fetch(env.SUPABASE_URL + '/rest/v1/findjnlib_matches?id=eq.' + encodeURIComponent(id), {
+    await fetch(env.SUPABASE_URL + '/rest/v1/faq_matches?id=eq.' + encodeURIComponent(id), {
       method: 'DELETE',
       headers: { 'apikey': env.SUPABASE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_KEY }
     });
@@ -512,7 +512,7 @@ async function handleAdmin(request, env, path) {
     const body = {};
     if (from) body.p_from = from + 'T00:00:00Z';
     if (to) body.p_to = to + 'T23:59:59.999Z';
-    const res = await fetch(env.SUPABASE_URL + '/rest/v1/rpc/findjnlib_ranking', {
+    const res = await fetch(env.SUPABASE_URL + '/rest/v1/rpc/faq_ranking', {
       method: 'POST',
       headers: {
         'apikey': env.SUPABASE_KEY,
@@ -537,7 +537,7 @@ async function handleAdmin(request, env, path) {
     const from = url.searchParams.get('from');
     const to = url.searchParams.get('to');
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '500', 10) || 500, 2000);
-    const SB = env.SUPABASE_URL + '/rest/v1/findjnlib_fails';
+    const SB = env.SUPABASE_URL + '/rest/v1/faq_fails';
     const hdrs = { 'apikey': env.SUPABASE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_KEY };
     let qstr = '?select=id,question,faq_top_id,faq_top_title,faq_top_score,staff_top_id,staff_top_name,staff_top_score,created_at&order=created_at.desc&limit=' + limit;
     if (from) qstr += '&created_at=gte.' + encodeURIComponent(from + 'T00:00:00Z');
@@ -555,7 +555,7 @@ async function handleAdmin(request, env, path) {
     const all = url.searchParams.get('all');
     const from = url.searchParams.get('from');
     const to = url.searchParams.get('to');
-    const SB = env.SUPABASE_URL + '/rest/v1/findjnlib_fails';
+    const SB = env.SUPABASE_URL + '/rest/v1/faq_fails';
     const hdrs = { 'apikey': env.SUPABASE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_KEY };
     let qstr = '';
     if (id) {
@@ -573,7 +573,7 @@ async function handleAdmin(request, env, path) {
 
   // ── 통계 초기화 (Supabase) ──
   if (path === '/admin/stats' && method === 'DELETE') {
-    await fetch(env.SUPABASE_URL + '/rest/v1/findjnlib_stats?id=gt.0', {
+    await fetch(env.SUPABASE_URL + '/rest/v1/faq_stats?id=gt.0', {
       method: 'DELETE',
       headers: { 'apikey': env.SUPABASE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_KEY }
     });
