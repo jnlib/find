@@ -99,6 +99,7 @@ tr:hover td{background:#f7faff}
     <div class="tab active" data-tab="faq" onclick="switchTab('faq',this)">FAQ 관리</div>
     <div class="tab" data-tab="staff" onclick="switchTab('staff',this)">담당자 관리</div>
     <div class="tab" data-tab="stats" onclick="switchTab('stats',this);loadStats()">통계 대시보드</div>
+    <div class="tab" data-tab="fails" onclick="switchTab('fails',this);loadFails()">매칭 실패</div>
     <div class="tab" data-tab="test" onclick="switchTab('test',this)">테스트 콘솔</div>
   </div>
 
@@ -134,10 +135,24 @@ tr:hover td{background:#f7faff}
 
   <!-- 통계 대시보드 패널 -->
   <div id="panel-stats" class="panel">
-    <div style="display:flex;gap:10px;margin-bottom:16px;align-items:center">
-      <h3 style="flex:1">통계 대시보드</h3>
+    <div style="display:flex;gap:10px;margin-bottom:16px;align-items:center;flex-wrap:wrap">
+      <h3 style="flex:1;min-width:160px">통계 대시보드</h3>
       <button class="btn btn-blue" onclick="loadStats()">새로고침</button>
+      <button class="btn btn-teal" onclick="downloadStatsCsv()">CSV 다운로드</button>
       <button class="btn btn-red" onclick="resetStats()">통계 초기화</button>
+    </div>
+
+    <!-- 기간 필터 -->
+    <div class="test-area" style="margin-bottom:16px;padding:14px">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <b style="font-size:13px">📅 기간 필터</b>
+        <label style="font-size:13px">시작일 <input type="date" id="statsFrom" onchange="loadStats()" style="padding:6px 8px;border:1px solid #dde8f8;border-radius:6px"></label>
+        <label style="font-size:13px">종료일 <input type="date" id="statsTo" onchange="loadStats()" style="padding:6px 8px;border:1px solid #dde8f8;border-radius:6px"></label>
+        <button class="btn btn-outline" onclick="setStatsPreset(7)">최근 7일</button>
+        <button class="btn btn-outline" onclick="setStatsPreset(30)">최근 30일</button>
+        <button class="btn btn-outline" onclick="setStatsPreset(0)">전체</button>
+        <span id="statsFilterLabel" style="font-size:12px;color:var(--muted);margin-left:auto"></span>
+      </div>
     </div>
 
     <!-- 요약 카드 -->
@@ -163,11 +178,53 @@ tr:hover td{background:#f7faff}
 
     <!-- 일별 상세 테이블 -->
     <div class="test-area">
-      <h4 style="margin-bottom:12px">일별 상세 데이터</h4>
+      <h4 style="margin-bottom:12px">일별 상세 데이터 (대장)</h4>
       <div style="overflow-x:auto">
         <table>
           <thead><tr><th>날짜</th><th>방문</th><th>질문</th><th>만족도 응답</th><th>평균 점수</th><th>미응답</th></tr></thead>
           <tbody id="dailyTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 매칭 실패 패널 -->
+  <div id="panel-fails" class="panel">
+    <div style="display:flex;gap:10px;margin-bottom:16px;align-items:center;flex-wrap:wrap">
+      <h3 style="flex:1;min-width:160px">매칭 실패 목록 <span style="font-size:13px;font-weight:400;color:var(--muted)">— 알고리즘 개선용</span></h3>
+      <button class="btn btn-blue" onclick="loadFails()">새로고침</button>
+      <button class="btn btn-teal" onclick="downloadFailsCsv()">CSV 다운로드</button>
+      <button class="btn btn-red" onclick="deleteAllFails()">기간 내 전체 삭제</button>
+    </div>
+
+    <div class="test-area" style="margin-bottom:16px;padding:14px">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <b style="font-size:13px">📅 기간 필터</b>
+        <label style="font-size:13px">시작일 <input type="date" id="failsFrom" onchange="loadFails()" style="padding:6px 8px;border:1px solid #dde8f8;border-radius:6px"></label>
+        <label style="font-size:13px">종료일 <input type="date" id="failsTo" onchange="loadFails()" style="padding:6px 8px;border:1px solid #dde8f8;border-radius:6px"></label>
+        <button class="btn btn-outline" onclick="setFailsPreset(7)">최근 7일</button>
+        <button class="btn btn-outline" onclick="setFailsPreset(30)">최근 30일</button>
+        <button class="btn btn-outline" onclick="setFailsPreset(0)">전체</button>
+        <input type="text" id="failsSearch" placeholder="질문 검색..." oninput="renderFails()" style="padding:6px 10px;border:1px solid #dde8f8;border-radius:6px;min-width:160px">
+        <span id="failsCount" style="font-size:12px;color:var(--muted);margin-left:auto"></span>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6">
+        💡 FAQ 매칭 점수가 <b>임계치(0.3)</b> 미만이라 "안내드릴게요" 기본 답변이 나간 질문들이에요.
+        점수가 애매한 질문은 → 해당 주제 <b>FAQ를 새로 만들거나</b>, 기존 FAQ에 <b>임베딩 보조 텍스트(예상 질문)</b>를 추가하면 매칭률이 올라가요.
+      </div>
+    </div>
+
+    <div class="test-area">
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr>
+            <th style="min-width:130px">발생 시각</th>
+            <th style="min-width:260px">사용자 질문</th>
+            <th style="min-width:180px">최고 FAQ 후보 (점수)</th>
+            <th style="min-width:160px">최고 담당자 후보 (점수)</th>
+            <th style="min-width:90px">관리</th>
+          </tr></thead>
+          <tbody id="failsTable"></tbody>
         </table>
       </div>
     </div>
@@ -678,11 +735,194 @@ function doTest() {
 }
 
 // ── 통계 대시보드 ──
+function getStatsRange() {
+  var from = document.getElementById('statsFrom').value;
+  var to = document.getElementById('statsTo').value;
+  var qs = [];
+  if (from) qs.push('from=' + encodeURIComponent(from));
+  if (to) qs.push('to=' + encodeURIComponent(to));
+  return qs.length ? '?' + qs.join('&') : '';
+}
+
+function setStatsPreset(days) {
+  var toEl = document.getElementById('statsTo');
+  var fromEl = document.getElementById('statsFrom');
+  if (days === 0) {
+    fromEl.value = '';
+    toEl.value = '';
+  } else {
+    var now = new Date();
+    var end = now.toISOString().slice(0, 10);
+    var startDate = new Date(now.getTime() - (days - 1) * 86400000);
+    var start = startDate.toISOString().slice(0, 10);
+    fromEl.value = start;
+    toEl.value = end;
+  }
+  loadStats();
+}
+
 function loadStats() {
-  api('GET', '/admin/stats').then(function(d) {
+  var label = document.getElementById('statsFilterLabel');
+  var from = document.getElementById('statsFrom').value;
+  var to = document.getElementById('statsTo').value;
+  if (label) label.textContent = (from || to) ? ('범위: ' + (from || '처음') + ' ~ ' + (to || '오늘')) : '전체 기간';
+  api('GET', '/admin/stats' + getStatsRange()).then(function(d) {
     if (d.error) { toast('통계 로드 실패: ' + d.error); return; }
     renderStats(d);
   });
+}
+
+// ── 통계 CSV 다운로드 (대장) ──
+function downloadStatsCsv() {
+  toast('CSV 생성 중...');
+  api('GET', '/admin/stats/raw' + getStatsRange()).then(function(d) {
+    if (d.error) { toast('다운로드 실패: ' + d.error); return; }
+    var rows = d.rows || [];
+    if (!rows.length) { toast('데이터가 없습니다'); return; }
+    // CSV 헤더
+    var header = ['ID','유형','점수','발생시각(KST)'];
+    var lines = [header.join(',')];
+    rows.forEach(function(r) {
+      var kst = new Date(r.created_at);
+      // KST 변환 (UTC+9)
+      var kstStr = new Date(kst.getTime() + 9*3600*1000).toISOString().replace('T',' ').slice(0,19);
+      var typeKo = r.type === 'visit' ? '방문' : (r.type === 'question' ? '질문' : (r.type === 'satisfaction' ? '만족도' : r.type));
+      var vals = [r.id, typeKo, (r.score==null?'':r.score), kstStr];
+      lines.push(vals.map(csvEscape).join(','));
+    });
+    var blob = new Blob(['\ufeff' + lines.join('\r\n')], {type:'text/csv;charset=utf-8'});
+    var from = document.getElementById('statsFrom').value || 'all';
+    var to = document.getElementById('statsTo').value || 'all';
+    var fname = 'findjnlib_stats_' + from + '_' + to + '.csv';
+    downloadBlob(blob, fname);
+    toast('다운로드 완료 (' + rows.length + '건)');
+  });
+}
+
+function csvEscape(v) {
+  if (v == null) return '';
+  var s = String(v);
+  if (s.indexOf('"') >= 0 || s.indexOf(',') >= 0 || s.indexOf('\n') >= 0 || s.indexOf('\r') >= 0) {
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+
+function downloadBlob(blob, filename) {
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  setTimeout(function() { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+}
+
+// ── 매칭 실패 ──
+var FAILS = [];
+
+function getFailsRange() {
+  var from = document.getElementById('failsFrom').value;
+  var to = document.getElementById('failsTo').value;
+  var qs = [];
+  if (from) qs.push('from=' + encodeURIComponent(from));
+  if (to) qs.push('to=' + encodeURIComponent(to));
+  return qs.length ? '?' + qs.join('&') : '';
+}
+
+function setFailsPreset(days) {
+  var toEl = document.getElementById('failsTo');
+  var fromEl = document.getElementById('failsFrom');
+  if (days === 0) {
+    fromEl.value = ''; toEl.value = '';
+  } else {
+    var now = new Date();
+    var end = now.toISOString().slice(0, 10);
+    var startDate = new Date(now.getTime() - (days - 1) * 86400000);
+    fromEl.value = startDate.toISOString().slice(0, 10);
+    toEl.value = end;
+  }
+  loadFails();
+}
+
+function loadFails() {
+  api('GET', '/admin/fails' + getFailsRange()).then(function(d) {
+    if (d.error) { toast('매칭실패 로드 실패: ' + d.error); return; }
+    FAILS = d.rows || [];
+    renderFails();
+  });
+}
+
+function renderFails() {
+  var q = (document.getElementById('failsSearch').value || '').toLowerCase();
+  var filtered = FAILS.filter(function(f) {
+    if (!q) return true;
+    return (f.question || '').toLowerCase().indexOf(q) >= 0
+        || (f.faq_top_title || '').toLowerCase().indexOf(q) >= 0;
+  });
+  document.getElementById('failsCount').textContent = '총 ' + filtered.length + '건 / 전체 ' + FAILS.length + '건';
+  var tb = document.getElementById('failsTable');
+  if (!filtered.length) {
+    tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:30px">매칭 실패 기록이 없습니다 🎉</td></tr>';
+    return;
+  }
+  tb.innerHTML = filtered.map(function(f) {
+    var kst = new Date(f.created_at);
+    var kstStr = new Date(kst.getTime() + 9*3600*1000).toISOString().replace('T',' ').slice(5,16);
+    var fScore = f.faq_top_score != null ? f.faq_top_score.toFixed(3) : '-';
+    var sScore = f.staff_top_score != null ? f.staff_top_score.toFixed(3) : '-';
+    var fScoreColor = f.faq_top_score >= 0.25 ? '#ed8936' : '#e53e3e';
+    var faqCell = f.faq_top_title
+      ? '<div style="font-size:13px">'+esc(f.faq_top_title)+'</div><div style="font-size:11px;color:'+fScoreColor+';font-weight:700">'+fScore+' <span style="color:var(--muted);font-weight:400">('+esc(f.faq_top_id||'')+')</span></div>'
+      : '<span style="color:var(--muted)">-</span>';
+    var staffCell = f.staff_top_name
+      ? '<div style="font-size:13px">'+esc(f.staff_top_name)+'</div><div style="font-size:11px;color:var(--muted);font-weight:700">'+sScore+'</div>'
+      : '<span style="color:var(--muted)">-</span>';
+    return '<tr>'
+      + '<td style="font-size:12px;color:var(--muted);white-space:nowrap">'+kstStr+'</td>'
+      + '<td style="max-width:360px"><div style="font-size:13px;line-height:1.5">'+esc(f.question||'')+'</div></td>'
+      + '<td>'+faqCell+'</td>'
+      + '<td>'+staffCell+'</td>'
+      + '<td><button class="btn btn-red" onclick="deleteFail('+f.id+')">삭제</button></td>'
+      + '</tr>';
+  }).join('');
+}
+
+function deleteFail(id) {
+  if (!confirm('이 매칭실패 기록을 삭제하시겠습니까?')) return;
+  api('DELETE', '/admin/fails?id=' + id).then(function(d) {
+    if (d.ok) { toast('삭제 완료'); loadFails(); }
+    else toast('오류: ' + (d.error || ''));
+  });
+}
+
+function deleteAllFails() {
+  var rng = getFailsRange();
+  var label = rng ? '현재 기간' : '전체';
+  if (!confirm(label + ' 매칭실패 기록을 모두 삭제하시겠습니까?\n(되돌릴 수 없습니다)')) return;
+  var sep = rng ? '&' : '?';
+  api('DELETE', '/admin/fails' + rng + sep + 'all=1').then(function(d) {
+    if (d.ok) { toast('삭제 완료'); loadFails(); }
+    else toast('오류: ' + (d.error || ''));
+  });
+}
+
+function downloadFailsCsv() {
+  if (!FAILS.length) { toast('데이터가 없습니다'); return; }
+  var header = ['ID','발생시각(KST)','사용자 질문','최고FAQ제목','최고FAQ ID','최고FAQ점수','최고담당자','최고담당자 ID','최고담당자점수'];
+  var lines = [header.join(',')];
+  FAILS.forEach(function(f) {
+    var kst = new Date(f.created_at);
+    var kstStr = new Date(kst.getTime() + 9*3600*1000).toISOString().replace('T',' ').slice(0,19);
+    lines.push([
+      f.id, kstStr, f.question || '',
+      f.faq_top_title || '', f.faq_top_id || '', f.faq_top_score==null?'':f.faq_top_score,
+      f.staff_top_name || '', f.staff_top_id || '', f.staff_top_score==null?'':f.staff_top_score
+    ].map(csvEscape).join(','));
+  });
+  var blob = new Blob(['\ufeff' + lines.join('\r\n')], {type:'text/csv;charset=utf-8'});
+  var from = document.getElementById('failsFrom').value || 'all';
+  var to = document.getElementById('failsTo').value || 'all';
+  downloadBlob(blob, 'findjnlib_fails_' + from + '_' + to + '.csv');
+  toast('다운로드 완료 (' + FAILS.length + '건)');
 }
 
 function renderStats(d) {

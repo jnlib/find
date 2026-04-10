@@ -80,6 +80,35 @@ function findBestMatch(queryVec, embeddings, threshold) {
   return bestScore >= threshold ? { id: bestId, score: bestScore } : null;
 }
 
+// ── Top 후보 (임계치 무관) ──
+function findTopCandidate(queryVec, embeddings) {
+  let bestId = null, bestScore = -1;
+  for (const [id, vec] of Object.entries(embeddings || {})) {
+    const score = cosineSim(queryVec, vec);
+    if (score > bestScore) {
+      bestScore = score;
+      bestId = id;
+    }
+  }
+  return bestId ? { id: bestId, score: bestScore } : null;
+}
+
+// ── 매칭 실패 로그 (Supabase) ──
+async function logMatchFail(env, data) {
+  try {
+    if (!env.SUPABASE_URL || !env.SUPABASE_KEY) return;
+    await fetch(env.SUPABASE_URL + '/rest/v1/findjnlib_fails', {
+      method: 'POST',
+      headers: {
+        'apikey': env.SUPABASE_KEY,
+        'Authorization': 'Bearer ' + env.SUPABASE_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
+    });
+  } catch(e) { /* silent */ }
+}
+
 // ── FAQ 임베딩용 텍스트 생성 ──
 function faqToEmbedText(faq) {
   return (faq.title || '') + ' ' + (faq.summary || '') + ' ' + (faq.embedText || '');
@@ -202,6 +231,23 @@ async function handleSearch(request, env, staffOnly) {
   const comments = await kvGet(env.FINDJNLIB_KV, 'comments') || {};
   const comment = faq ? (comments[faq.id] || '안내드릴게요! 😊') : '안내드릴게요! 😊';
 
+  // 매칭 실패 시 기록 (FAQ가 임계치 미달일 때만 저장 — 알고리즘 개선용)
+  if (!faq) {
+    const topFaq = findTopCandidate(queryVec, faqEmbeddings);
+    const topStaff = findTopCandidate(queryVec, staffEmbeddings);
+    const topFaqObj = topFaq ? (faqs || []).find(c => c.id === topFaq.id) : null;
+    const topStaffObj = topStaff ? (staffs || []).find(c => c.id === topStaff.id) : null;
+    await logMatchFail(env, {
+      question: question.slice(0, 500),
+      faq_top_id: topFaq ? topFaq.id : null,
+      faq_top_title: topFaqObj ? (topFaqObj.title || null) : null,
+      faq_top_score: topFaq ? Math.round(topFaq.score * 1000) / 1000 : null,
+      staff_top_id: topStaff ? topStaff.id : null,
+      staff_top_name: topStaffObj ? (topStaffObj.name || null) : null,
+      staff_top_score: topStaff ? Math.round(topStaff.score * 1000) / 1000 : null,
+    });
+  }
+
   return jsonRes({
     staff: staff ? { id:staff.id, dept:staff.dept, role:staff.role, name:staff.name, tel:staff.tel, duties:staff.duties } : null,
     faq: faq ? { id:faq.id, title:faq.title, summary:faq.summary, link:faq.link } : null,
@@ -316,14 +362,23 @@ async function handleAdmin(request, env, path) {
   }
 
   // ── 통계 조회 (Supabase) ──
+  // GET /admin/stats?from=YYYY-MM-DD&to=YYYY-MM-DD  (기간 필터, 선택)
   if ((path === '/admin/stats' || path === '/admin/satisfaction') && method === 'GET') {
+    const url = new URL(request.url);
+    const from = url.searchParams.get('from'); // YYYY-MM-DD
+    const to = url.searchParams.get('to');     // YYYY-MM-DD (inclusive)
+
     const SB = env.SUPABASE_URL + '/rest/v1/findjnlib_stats';
     const hdrs = { 'apikey': env.SUPABASE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_KEY };
 
-    const res = await fetch(SB + '?select=type,score,created_at&order=created_at.asc', { headers: hdrs });
+    let qstr = '?select=type,score,created_at&order=created_at.asc';
+    if (from) qstr += '&created_at=gte.' + encodeURIComponent(from + 'T00:00:00Z');
+    if (to)   qstr += '&created_at=lte.' + encodeURIComponent(to + 'T23:59:59.999Z');
+
+    const res = await fetch(SB + qstr, { headers: hdrs });
     const rows = await res.json();
 
-    // 전체 누적
+    // 전체 누적 (필터 범위 내)
     let visits = 0, questions = 0, satTotal = 0, satSum = 0;
     const satCounts = [0,0,0,0,0];
     const dayMap = {};
@@ -340,12 +395,75 @@ async function handleAdmin(request, env, path) {
     }
     const satAvg = satTotal > 0 ? Math.round((satSum / satTotal) * 10) / 10 : 0;
     const days = Object.keys(dayMap).sort();
-    const daily = days.slice(-30).map(d => dayMap[d]);
+    // 필터 쓰면 전체 기간, 없으면 최근 30일만 차트에 표시
+    const daily = (from || to) ? days.map(d => dayMap[d]) : days.slice(-30).map(d => dayMap[d]);
 
     if (path === '/admin/satisfaction') {
       return jsonRes({ total: satTotal, sum: satSum, counts: satCounts, avg: satAvg });
     }
-    return jsonRes({ all: { visits, questions, satTotal, satSum, satCounts, satAvg }, daily, totalDays: days.length });
+    return jsonRes({
+      all: { visits, questions, satTotal, satSum, satCounts, satAvg },
+      daily,
+      totalDays: days.length,
+      filter: { from: from || null, to: to || null }
+    });
+  }
+
+  // ── 통계 원본(raw) 조회 — CSV 다운로드용 ──
+  // GET /admin/stats/raw?from=&to=
+  if (path === '/admin/stats/raw' && method === 'GET') {
+    const url = new URL(request.url);
+    const from = url.searchParams.get('from');
+    const to = url.searchParams.get('to');
+    const SB = env.SUPABASE_URL + '/rest/v1/findjnlib_stats';
+    const hdrs = { 'apikey': env.SUPABASE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_KEY };
+    let qstr = '?select=id,type,score,created_at&order=created_at.desc';
+    if (from) qstr += '&created_at=gte.' + encodeURIComponent(from + 'T00:00:00Z');
+    if (to)   qstr += '&created_at=lte.' + encodeURIComponent(to + 'T23:59:59.999Z');
+    const res = await fetch(SB + qstr, { headers: hdrs });
+    const rows = await res.json();
+    return jsonRes({ rows: Array.isArray(rows) ? rows : [], count: Array.isArray(rows) ? rows.length : 0 });
+  }
+
+  // ── 매칭 실패 조회 ──
+  // GET /admin/fails?from=&to=&limit=500
+  if (path === '/admin/fails' && method === 'GET') {
+    const url = new URL(request.url);
+    const from = url.searchParams.get('from');
+    const to = url.searchParams.get('to');
+    const limit = Math.min(parseInt(url.searchParams.get('limit') || '500', 10) || 500, 2000);
+    const SB = env.SUPABASE_URL + '/rest/v1/findjnlib_fails';
+    const hdrs = { 'apikey': env.SUPABASE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_KEY };
+    let qstr = '?select=id,question,faq_top_id,faq_top_title,faq_top_score,staff_top_id,staff_top_name,staff_top_score,created_at&order=created_at.desc&limit=' + limit;
+    if (from) qstr += '&created_at=gte.' + encodeURIComponent(from + 'T00:00:00Z');
+    if (to)   qstr += '&created_at=lte.' + encodeURIComponent(to + 'T23:59:59.999Z');
+    const res = await fetch(SB + qstr, { headers: hdrs });
+    const rows = await res.json();
+    return jsonRes({ rows: Array.isArray(rows) ? rows : [], count: Array.isArray(rows) ? rows.length : 0 });
+  }
+
+  // ── 매칭 실패 삭제 ──
+  // DELETE /admin/fails?id=123  또는  DELETE /admin/fails?all=1 (기간 내 전체)
+  if (path === '/admin/fails' && method === 'DELETE') {
+    const url = new URL(request.url);
+    const id = url.searchParams.get('id');
+    const all = url.searchParams.get('all');
+    const from = url.searchParams.get('from');
+    const to = url.searchParams.get('to');
+    const SB = env.SUPABASE_URL + '/rest/v1/findjnlib_fails';
+    const hdrs = { 'apikey': env.SUPABASE_KEY, 'Authorization': 'Bearer ' + env.SUPABASE_KEY };
+    let qstr = '';
+    if (id) {
+      qstr = '?id=eq.' + encodeURIComponent(id);
+    } else if (all === '1') {
+      qstr = '?id=gt.0';
+      if (from) qstr += '&created_at=gte.' + encodeURIComponent(from + 'T00:00:00Z');
+      if (to)   qstr += '&created_at=lte.' + encodeURIComponent(to + 'T23:59:59.999Z');
+    } else {
+      return jsonRes({ error: 'id 또는 all=1 필요' }, 400);
+    }
+    const res = await fetch(SB + qstr, { method: 'DELETE', headers: hdrs });
+    return jsonRes({ ok: res.ok });
   }
 
   // ── 통계 초기화 (Supabase) ──
