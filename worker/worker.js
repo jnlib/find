@@ -231,9 +231,12 @@ async function handleSearch(request, env, staffOnly) {
   const comments = await kvGet(env.FINDJNLIB_KV, 'comments') || {};
   const comment = faq ? (comments[faq.id] || '안내드릴게요! 😊') : '안내드릴게요! 😊';
 
-  // 매칭 실패 시 기록 (FAQ가 임계치 미달일 때만 저장 — 알고리즘 개선용)
-  if (!faq) {
-    const topFaq = findTopCandidate(queryVec, faqEmbeddings);
+  // 저신뢰/실패 매칭 기록 (알고리즘 개선용)
+  // - 유저 동작 임계치는 0.3 그대로 (답변은 기존처럼 표시)
+  // - 로깅 임계치는 0.55 — 이하이면 "개선 필요" 후보로 별도 기록
+  const LOG_CONFIDENCE_THRESHOLD = 0.55;
+  const topFaq = findTopCandidate(queryVec, faqEmbeddings);
+  if (!topFaq || topFaq.score < LOG_CONFIDENCE_THRESHOLD) {
     const topStaff = findTopCandidate(queryVec, staffEmbeddings);
     const topFaqObj = topFaq ? (faqs || []).find(c => c.id === topFaq.id) : null;
     const topStaffObj = topStaff ? (staffs || []).find(c => c.id === topStaff.id) : null;
