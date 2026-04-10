@@ -109,6 +109,23 @@ async function logMatchFail(env, data) {
   } catch(e) { /* silent */ }
 }
 
+// ── 매칭 성공 로그 (인기 랭킹용) ──
+async function logMatchSuccess(env, faqId, staffId) {
+  try {
+    if (!env.SUPABASE_URL || !env.SUPABASE_KEY) return;
+    if (!faqId && !staffId) return;
+    await fetch(env.SUPABASE_URL + '/rest/v1/findjnlib_matches', {
+      method: 'POST',
+      headers: {
+        'apikey': env.SUPABASE_KEY,
+        'Authorization': 'Bearer ' + env.SUPABASE_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ faq_id: faqId || null, staff_id: staffId || null })
+    });
+  } catch(e) { /* silent */ }
+}
+
 // ── FAQ 임베딩용 텍스트 생성 ──
 function faqToEmbedText(faq) {
   return (faq.title || '') + ' ' + (faq.summary || '') + ' ' + (faq.embedText || '');
@@ -197,6 +214,8 @@ async function handleSearch(request, env, staffOnly) {
     const faqId = question.replace('__direct__','').replace('__faq__','');
     const faqs = await kvGet(env.FINDJNLIB_KV, 'faqs') || [];
     const faq = faqs.find(c => c.id === faqId);
+    // 꼬리질문 클릭도 매칭 성공으로 카운트
+    if (faq) await logMatchSuccess(env, faq.id, null);
     return jsonRes({
       staff: null,
       faq: faq ? { id:faq.id, title:faq.title, summary:faq.summary, link:faq.link } : null
@@ -220,6 +239,7 @@ async function handleSearch(request, env, staffOnly) {
     const match = findBestMatch(queryVec, staffEmbeddings, 0.3);
     if (!match) return jsonRes({ found: false });
     const staff = staffs.find(c => c.id === match.id);
+    if (staff) await logMatchSuccess(env, null, staff.id);
     return jsonRes({ found: true, staff: staff ? { id:staff.id, dept:staff.dept, role:staff.role, name:staff.name, tel:staff.tel, duties:staff.duties } : null });
   }
 
@@ -250,6 +270,9 @@ async function handleSearch(request, env, staffOnly) {
       staff_top_score: topStaff ? Math.round(topStaff.score * 1000) / 1000 : null,
     });
   }
+
+  // 매칭 성공 로그 (인기 랭킹 집계용) — 임계치 0.3 이상만 기록
+  await logMatchSuccess(env, faq ? faq.id : null, staff ? staff.id : null);
 
   return jsonRes({
     staff: staff ? { id:staff.id, dept:staff.dept, role:staff.role, name:staff.name, tel:staff.tel, duties:staff.duties } : null,
@@ -426,6 +449,33 @@ async function handleAdmin(request, env, path) {
     const res = await fetch(SB + qstr, { headers: hdrs });
     const rows = await res.json();
     return jsonRes({ rows: Array.isArray(rows) ? rows : [], count: Array.isArray(rows) ? rows.length : 0 });
+  }
+
+  // ── 인기 FAQ/담당자 랭킹 ──
+  // GET /admin/ranking?from=&to=
+  if (path === '/admin/ranking' && method === 'GET') {
+    const url = new URL(request.url);
+    const from = url.searchParams.get('from');
+    const to = url.searchParams.get('to');
+    const body = {};
+    if (from) body.p_from = from + 'T00:00:00Z';
+    if (to) body.p_to = to + 'T23:59:59.999Z';
+    const res = await fetch(env.SUPABASE_URL + '/rest/v1/rpc/findjnlib_ranking', {
+      method: 'POST',
+      headers: {
+        'apikey': env.SUPABASE_KEY,
+        'Authorization': 'Bearer ' + env.SUPABASE_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    return jsonRes({
+      faq: (data && data.faq) || [],
+      staff: (data && data.staff) || [],
+      total: (data && data.total) || 0,
+      filter: { from: from || null, to: to || null }
+    });
   }
 
   // ── 매칭 실패 조회 ──

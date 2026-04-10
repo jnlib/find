@@ -107,13 +107,14 @@ tr:hover td{background:#f7faff}
   <div id="panel-faq" class="panel active">
     <div class="toolbar">
       <input type="text" id="faqSearch" placeholder="FAQ 검색..." oninput="renderFaqs()">
+      <button id="faqSortBtn" class="btn btn-outline" onclick="toggleFaqSortByCount()">🔢 조회순 정렬</button>
       <button class="btn btn-teal" onclick="openFaqModal()">+ FAQ 추가</button>
       <button class="btn btn-blue" onclick="downloadFaqCsv()">CSV 다운로드</button>
       <button class="btn btn-orange" onclick="document.getElementById('faqUpload').click()">CSV 업로드</button>
       <input type="file" id="faqUpload" accept=".csv" style="display:none" onchange="uploadFaqCsv(this)">
     </div>
     <div style="overflow-x:auto">
-      <table><thead><tr><th>ID</th><th>제목</th><th>공감 한마디</th><th>꼬리질문</th><th>링크</th><th>관리</th></tr></thead>
+      <table><thead><tr><th>ID</th><th>제목</th><th>조회수</th><th>공감 한마디</th><th>꼬리질문</th><th>링크</th><th>관리</th></tr></thead>
       <tbody id="faqTable"></tbody></table>
     </div>
   </div>
@@ -122,13 +123,14 @@ tr:hover td{background:#f7faff}
   <div id="panel-staff" class="panel">
     <div class="toolbar">
       <input type="text" id="staffSearch" placeholder="담당자 검색..." oninput="renderStaffs()">
+      <button id="staffSortBtn" class="btn btn-outline" onclick="toggleStaffSortByCount()">🔢 조회순 정렬</button>
       <button class="btn btn-teal" onclick="openStaffModal()">+ 담당자 추가</button>
       <button class="btn btn-blue" onclick="downloadStaffCsv()">CSV 다운로드</button>
       <button class="btn btn-orange" onclick="document.getElementById('staffUpload').click()">CSV 업로드</button>
       <input type="file" id="staffUpload" accept=".csv" style="display:none" onchange="uploadStaffCsv(this)">
     </div>
     <div style="overflow-x:auto">
-      <table><thead><tr><th>ID</th><th>부서</th><th>직책</th><th>이름</th><th>전화</th><th>키워드</th><th>관리</th></tr></thead>
+      <table><thead><tr><th>ID</th><th>부서</th><th>직책</th><th>이름</th><th>조회수</th><th>전화</th><th>키워드</th><th>관리</th></tr></thead>
       <tbody id="staffTable"></tbody></table>
     </div>
   </div>
@@ -177,13 +179,35 @@ tr:hover td{background:#f7faff}
     </div>
 
     <!-- 일별 상세 테이블 -->
-    <div class="test-area">
+    <div class="test-area" style="margin-bottom:20px">
       <h4 style="margin-bottom:12px">일별 상세 데이터 (대장)</h4>
       <div style="overflow-x:auto">
         <table>
           <thead><tr><th>날짜</th><th>방문</th><th>질문</th><th>만족도 응답</th><th>평균 점수</th><th>미응답</th></tr></thead>
           <tbody id="dailyTable"></tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- 🆕 인기 FAQ TOP 20 -->
+    <div class="test-area" style="margin-bottom:20px">
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+        <h4 style="flex:1;min-width:180px">📈 인기 FAQ TOP 20 <span id="rankFaqTotal" style="font-size:12px;font-weight:400;color:var(--muted)"></span></h4>
+        <button class="btn btn-teal" onclick="downloadRankingCsv('faq')">CSV 다운로드</button>
+      </div>
+      <div id="rankFaqChart">
+        <div style="text-align:center;color:var(--muted);padding:20px">데이터를 불러오는 중...</div>
+      </div>
+    </div>
+
+    <!-- 🆕 인기 담당자 TOP 10 -->
+    <div class="test-area">
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+        <h4 style="flex:1;min-width:180px">👥 인기 담당자 TOP 10 <span id="rankStaffTotal" style="font-size:12px;font-weight:400;color:var(--muted)"></span></h4>
+        <button class="btn btn-teal" onclick="downloadRankingCsv('staff')">CSV 다운로드</button>
+      </div>
+      <div id="rankStaffChart">
+        <div style="text-align:center;color:var(--muted);padding:20px">데이터를 불러오는 중...</div>
       </div>
     </div>
   </div>
@@ -278,6 +302,7 @@ function doLogin() {
     document.getElementById('mainWrap').style.display = 'block';
     renderFaqs();
     loadStaffs();
+    loadAllTimeCounts(); // 조회수 배지 로드
   }).catch(function() { toast('연결 실패'); TOKEN=''; });
 }
 function doLogout() { TOKEN=''; location.reload(); }
@@ -298,15 +323,31 @@ function switchTab(name, el) {
 }
 
 // ── FAQ 렌더링 ──
+var FAQ_SORT_BY_COUNT = false;
+function toggleFaqSortByCount() {
+  FAQ_SORT_BY_COUNT = !FAQ_SORT_BY_COUNT;
+  var btn = document.getElementById('faqSortBtn');
+  if (btn) btn.textContent = FAQ_SORT_BY_COUNT ? '🔢 조회순 ✓' : '🔢 조회순 정렬';
+  renderFaqs();
+}
+
 function renderFaqs() {
   var q = (document.getElementById('faqSearch').value||'').toLowerCase();
   var filtered = FAQS.filter(function(f) { return !q || f.title.toLowerCase().includes(q) || f.id.includes(q); });
+  if (FAQ_SORT_BY_COUNT) {
+    filtered = filtered.slice().sort(function(a, b) {
+      return (FAQ_COUNTS[b.id] || 0) - (FAQ_COUNTS[a.id] || 0);
+    });
+  }
   var tb = document.getElementById('faqTable');
   tb.innerHTML = filtered.map(function(f) {
     var rels = (RELATIONS[f.id]||[]).map(function(r) { return '<span class="rel-tag">'+r+'</span>'; }).join('');
     var comment = COMMENTS[f.id] || '';
     var link = f.link ? '<a href="'+esc(f.link)+'" target="_blank" style="font-size:12px">링크</a>' : '-';
-    return '<tr><td><span class="badge badge-teal">'+f.id+'</span></td><td style="max-width:250px">'+esc(f.title)+'</td><td style="max-width:200px;font-size:12px;color:#666">'+esc(comment).slice(0,30)+'</td><td><div class="rel-tags">'+rels+'</div></td><td>'+link+'</td><td><button class="btn btn-outline" onclick="openFaqModal(\''+f.id+'\')">수정</button> <button class="btn btn-red" onclick="deleteFaq(\''+f.id+'\')">삭제</button></td></tr>';
+    var cnt = FAQ_COUNTS[f.id] || 0;
+    var cntColor = cnt >= 50 ? '#ed8936' : (cnt >= 10 ? '#3182ff' : (cnt > 0 ? '#38a169' : '#cbd5e0'));
+    var cntBadge = '<span title="전체 누적 매칭 수" style="display:inline-block;background:'+cntColor+';color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700">📊 '+fmt(cnt)+'</span>';
+    return '<tr><td><span class="badge badge-teal">'+f.id+'</span></td><td style="max-width:250px">'+esc(f.title)+'</td><td>'+cntBadge+'</td><td style="max-width:200px;font-size:12px;color:#666">'+esc(comment).slice(0,30)+'</td><td><div class="rel-tags">'+rels+'</div></td><td>'+link+'</td><td><button class="btn btn-outline" onclick="openFaqModal(\''+f.id+'\')">수정</button> <button class="btn btn-red" onclick="deleteFaq(\''+f.id+'\')">삭제</button></td></tr>';
   }).join('');
 }
 
@@ -449,6 +490,14 @@ function nextFaqId() {
 }
 
 // ── 담당자 ──
+var STAFF_SORT_BY_COUNT = false;
+function toggleStaffSortByCount() {
+  STAFF_SORT_BY_COUNT = !STAFF_SORT_BY_COUNT;
+  var btn = document.getElementById('staffSortBtn');
+  if (btn) btn.textContent = STAFF_SORT_BY_COUNT ? '🔢 조회순 ✓' : '🔢 조회순 정렬';
+  renderStaffs();
+}
+
 function loadStaffs() {
   api('GET','/admin/staffs').then(function(d) {
     STAFFS = d.staffs || [];
@@ -458,8 +507,16 @@ function loadStaffs() {
 function renderStaffs() {
   var q = (document.getElementById('staffSearch').value||'').toLowerCase();
   var filtered = STAFFS.filter(function(s) { return !q || s.name.toLowerCase().includes(q) || s.dept.toLowerCase().includes(q) || (s.keywords||'').toLowerCase().includes(q); });
+  if (STAFF_SORT_BY_COUNT) {
+    filtered = filtered.slice().sort(function(a, b) {
+      return (STAFF_COUNTS[b.id] || 0) - (STAFF_COUNTS[a.id] || 0);
+    });
+  }
   document.getElementById('staffTable').innerHTML = filtered.map(function(s) {
-    return '<tr><td><span class="badge badge-blue">'+s.id+'</span></td><td>'+esc(s.dept)+'</td><td>'+esc(s.role)+'</td><td>'+esc(s.name)+'</td><td>02-'+esc(s.tel)+'</td><td style="max-width:200px;font-size:12px">'+esc(s.keywords)+'</td><td><button class="btn btn-outline" onclick="openStaffModal(\''+s.id+'\')">수정</button> <button class="btn btn-red" onclick="deleteStaff(\''+s.id+'\')">삭제</button></td></tr>';
+    var cnt = STAFF_COUNTS[s.id] || 0;
+    var cntColor = cnt >= 50 ? '#ed8936' : (cnt >= 10 ? '#3182ff' : (cnt > 0 ? '#38a169' : '#cbd5e0'));
+    var cntBadge = '<span title="전체 누적 매칭 수" style="display:inline-block;background:'+cntColor+';color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700">📊 '+fmt(cnt)+'</span>';
+    return '<tr><td><span class="badge badge-blue">'+s.id+'</span></td><td>'+esc(s.dept)+'</td><td>'+esc(s.role)+'</td><td>'+esc(s.name)+'</td><td>'+cntBadge+'</td><td>02-'+esc(s.tel)+'</td><td style="max-width:200px;font-size:12px">'+esc(s.keywords)+'</td><td><button class="btn btn-outline" onclick="openStaffModal(\''+s.id+'\')">수정</button> <button class="btn btn-red" onclick="deleteStaff(\''+s.id+'\')">삭제</button></td></tr>';
   }).join('');
 }
 function openStaffModal(id) {
@@ -770,6 +827,123 @@ function loadStats() {
   api('GET', '/admin/stats' + getStatsRange()).then(function(d) {
     if (d.error) { toast('통계 로드 실패: ' + d.error); return; }
     renderStats(d);
+  });
+  // 랭킹도 같이 (기간 필터 동일 적용)
+  loadRanking();
+}
+
+// ── 인기 랭킹 ──
+var RANKING_DATA = null; // {faq:[{id,count}], staff:[...], total}
+
+function loadRanking() {
+  api('GET', '/admin/ranking' + getStatsRange()).then(function(d) {
+    if (d.error) {
+      document.getElementById('rankFaqChart').innerHTML = '<div style="color:#e53e3e;padding:16px">랭킹 로드 실패: ' + d.error + '</div>';
+      return;
+    }
+    RANKING_DATA = d;
+    renderRanking(d);
+  });
+}
+
+function renderRanking(d) {
+  var faqList = (d.faq || []).slice(0, 20);
+  var staffList = (d.staff || []).slice(0, 10);
+  var totalFaq = (d.faq || []).reduce(function(s, r) { return s + r.count; }, 0);
+  var totalStaff = (d.staff || []).reduce(function(s, r) { return s + r.count; }, 0);
+
+  document.getElementById('rankFaqTotal').textContent = '(총 ' + fmt(totalFaq) + '건 매칭 / ' + (d.faq || []).length + '개 FAQ)';
+  document.getElementById('rankStaffTotal').textContent = '(총 ' + fmt(totalStaff) + '건 매칭 / ' + (d.staff || []).length + '명)';
+
+  // FAQ 차트
+  if (!faqList.length) {
+    document.getElementById('rankFaqChart').innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px">아직 매칭 기록이 없습니다</div>';
+  } else {
+    var maxFaq = faqList[0].count || 1;
+    var html = '';
+    faqList.forEach(function(r, i) {
+      var f = (FAQS || []).find(function(x) { return x.id === r.id; });
+      var title = f ? f.title : '(삭제됨)';
+      var pct = totalFaq > 0 ? Math.round((r.count / totalFaq) * 1000) / 10 : 0;
+      var barW = Math.max(2, Math.round((r.count / maxFaq) * 100));
+      var rank = i + 1;
+      var rankColor = rank === 1 ? '#ed8936' : (rank === 2 ? '#a0aec0' : (rank === 3 ? '#c08457' : '#cbd5e0'));
+      html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:6px;border-radius:6px" onmouseover="this.style.background=\'#f7f9ff\'" onmouseout="this.style.background=\'transparent\'">'
+        + '<div style="width:28px;text-align:center;font-weight:900;color:'+rankColor+';font-size:14px">'+rank+'</div>'
+        + '<div style="width:50px;font-size:11px;color:var(--muted);font-family:monospace">'+esc(r.id)+'</div>'
+        + '<div style="flex:1;min-width:120px;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+esc(title)+'">'+esc(title)+'</div>'
+        + '<div style="flex:2;background:#f0f0f0;border-radius:4px;height:18px;overflow:hidden;min-width:80px">'
+        + '<div style="width:'+barW+'%;height:100%;background:linear-gradient(90deg,#00cfc0,#3182ff);border-radius:4px;transition:width .5s"></div></div>'
+        + '<div style="width:100px;text-align:right;font-size:12px;font-weight:700">'+fmt(r.count)+'건 <span style="color:var(--muted);font-weight:400">('+pct+'%)</span></div>'
+        + '</div>';
+    });
+    document.getElementById('rankFaqChart').innerHTML = html;
+  }
+
+  // 담당자 차트
+  if (!staffList.length) {
+    document.getElementById('rankStaffChart').innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px">아직 매칭 기록이 없습니다</div>';
+  } else {
+    var maxStaff = staffList[0].count || 1;
+    var html2 = '';
+    staffList.forEach(function(r, i) {
+      var s = (STAFFS || []).find(function(x) { return x.id === r.id; });
+      var name = s ? (s.name || s.role || s.id) : '(삭제됨)';
+      var pct = totalStaff > 0 ? Math.round((r.count / totalStaff) * 1000) / 10 : 0;
+      var barW = Math.max(2, Math.round((r.count / maxStaff) * 100));
+      var rank = i + 1;
+      var rankColor = rank === 1 ? '#ed8936' : (rank === 2 ? '#a0aec0' : (rank === 3 ? '#c08457' : '#cbd5e0'));
+      html2 += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:6px;border-radius:6px" onmouseover="this.style.background=\'#f7f9ff\'" onmouseout="this.style.background=\'transparent\'">'
+        + '<div style="width:28px;text-align:center;font-weight:900;color:'+rankColor+';font-size:14px">'+rank+'</div>'
+        + '<div style="width:50px;font-size:11px;color:var(--muted);font-family:monospace">'+esc(r.id)+'</div>'
+        + '<div style="flex:1;min-width:120px;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+esc(name)+'">'+esc(name)+'</div>'
+        + '<div style="flex:2;background:#f0f0f0;border-radius:4px;height:18px;overflow:hidden;min-width:80px">'
+        + '<div style="width:'+barW+'%;height:100%;background:linear-gradient(90deg,#9f7aea,#ed64a6);border-radius:4px;transition:width .5s"></div></div>'
+        + '<div style="width:100px;text-align:right;font-size:12px;font-weight:700">'+fmt(r.count)+'건 <span style="color:var(--muted);font-weight:400">('+pct+'%)</span></div>'
+        + '</div>';
+    });
+    document.getElementById('rankStaffChart').innerHTML = html2;
+  }
+}
+
+function downloadRankingCsv(kind) {
+  if (!RANKING_DATA) { toast('데이터가 없습니다'); return; }
+  var list = (kind === 'staff') ? (RANKING_DATA.staff || []) : (RANKING_DATA.faq || []);
+  if (!list.length) { toast('데이터가 없습니다'); return; }
+  var total = list.reduce(function(s, r) { return s + r.count; }, 0);
+  var isStaff = (kind === 'staff');
+  var header = isStaff ? ['순위','담당자ID','이름','부서','매칭건수','비율(%)'] : ['순위','FAQ ID','제목','링크','매칭건수','비율(%)'];
+  var lines = [header.join(',')];
+  list.forEach(function(r, i) {
+    var pct = total > 0 ? Math.round((r.count / total) * 1000) / 10 : 0;
+    if (isStaff) {
+      var s = (STAFFS || []).find(function(x) { return x.id === r.id; });
+      lines.push([i+1, r.id, s ? (s.name || '') : '', s ? (s.dept || '') : '', r.count, pct].map(csvEscape).join(','));
+    } else {
+      var f = (FAQS || []).find(function(x) { return x.id === r.id; });
+      lines.push([i+1, r.id, f ? (f.title || '') : '', f ? (f.link || '') : '', r.count, pct].map(csvEscape).join(','));
+    }
+  });
+  var blob = new Blob(['\ufeff' + lines.join('\r\n')], {type:'text/csv;charset=utf-8'});
+  var from = document.getElementById('statsFrom').value || 'all';
+  var to = document.getElementById('statsTo').value || 'all';
+  downloadBlob(blob, 'findjnlib_ranking_' + kind + '_' + from + '_' + to + '.csv');
+  toast('다운로드 완료 (' + list.length + '건)');
+}
+
+// 전체 누적 랭킹 (FAQ/담당자 탭 배지용) — 기간 필터 없이
+var FAQ_COUNTS = {};
+var STAFF_COUNTS = {};
+function loadAllTimeCounts() {
+  api('GET', '/admin/ranking').then(function(d) {
+    if (d.error) return;
+    FAQ_COUNTS = {};
+    (d.faq || []).forEach(function(r) { FAQ_COUNTS[r.id] = r.count; });
+    STAFF_COUNTS = {};
+    (d.staff || []).forEach(function(r) { STAFF_COUNTS[r.id] = r.count; });
+    // 현재 화면에 반영 (FAQ/담당자 탭이 렌더돼있으면 다시 그림)
+    if (typeof renderFaqs === 'function' && FAQS && FAQS.length) renderFaqs();
+    if (typeof renderStaffs === 'function' && STAFFS && STAFFS.length) renderStaffs();
   });
 }
 
