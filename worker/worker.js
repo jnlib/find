@@ -74,8 +74,12 @@ function normalizeCacheKey(q) {
     .replace(/(요|습니다|세요|나요|을까요|ㅋ|ㅎ|ㅠ|ㅜ)+$/g, '');
 }
 
-// ── Gemini Flash LLM API ──
-const GEMINI_LLM_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent';
+// ── Gemini Flash LLM API (Lite 우선, 실패 시 Flash fallback) ──
+const GEMINI_MODELS = [
+  'gemini-2.5-flash-lite',
+  'gemini-2.5-flash',
+];
+const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/';
 
 const LLM_SYSTEM_PROMPT = `종로도서관 안내 시스템.
 이용자 질문에 가장 적절한 FAQ 번호와 담당자 번호를 답하시오.
@@ -113,27 +117,42 @@ function buildStaffList(staffs) {
 async function callGeminiLLM(apiKey, faqList, staffList, question) {
   const userPrompt = `--- FAQ ---\n${faqList}\n\n--- 담당자 ---\n${staffList}\n\nQ: ${question}`;
 
-  const res = await fetch(GEMINI_LLM_URL + '?key=' + apiKey, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      system_instruction: { parts: [{ text: LLM_SYSTEM_PROMPT }] },
-      contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-      generationConfig: {
-        temperature: 0,
-        maxOutputTokens: 30,
+  const body = {
+    system_instruction: { parts: [{ text: LLM_SYSTEM_PROMPT }] },
+    contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+    generationConfig: {
+      temperature: 0,
+      maxOutputTokens: 100,
+      thinkingConfig: { thinkingBudget: 0 },
+    }
+  };
+
+  // 모델 순서대로 시도 (Lite → Flash)
+  for (const model of GEMINI_MODELS) {
+    try {
+      const res = await fetch(GEMINI_BASE + model + ':generateContent?key=' + apiKey, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify(body)
+      });
+
+      if (res.status === 503 || res.status === 429) continue; // 과부하 → 다음 모델
+
+      if (!res.ok) {
+        const t = await res.text().catch(() => '');
+        throw new Error('Gemini ' + model + ' ' + res.status + ': ' + t.slice(0, 200));
       }
-    })
-  });
 
-  if (!res.ok) {
-    const t = await res.text().catch(() => '');
-    throw new Error('Gemini LLM API ' + res.status + ': ' + t.slice(0, 200));
+      const data = await res.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      if (!text) continue; // 빈 응답 → 다음 모델
+      return text.trim();
+    } catch(e) {
+      if (model === GEMINI_MODELS[GEMINI_MODELS.length - 1]) throw e;
+      // 마지막 모델이 아니면 다음 시도
+    }
   }
-
-  const data = await res.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  return text.trim();
+  throw new Error('All Gemini models failed');
 }
 
 // ── LLM 응답 파싱 ──
