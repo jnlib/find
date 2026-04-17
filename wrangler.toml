@@ -1,0 +1,7 @@
+name = "findjnlib"
+main = "worker/worker.js"
+compatibility_date = "2024-09-23"
+
+[[kv_namespaces]]
+binding = "FINDJNLIB_KV"
+id = "8383aca4a57b44fd9a0f0a347e30fb87"

@@ -563,7 +563,8 @@ async function doSearch(q) {
     if (lr._stop) lr._stop(); lr.remove();
     if (!res.ok) { console.debug('[chat]', res.status, txt.slice(0,200)); addAI('일시적인 오류가 발생했어요 😥'); return; }
     var data = JSON.parse(txt);
-    if (data.faq) CACHE[data.faq.id] = data.faq;
+    if (data.faq && Array.isArray(data.faq)) data.faq.forEach(function(f){ CACHE[f.id] = f; });
+    else if (data.faq && data.faq.id) CACHE[data.faq.id] = data.faq;
     renderResult(data, q);
   } catch(e) {
     console.debug('[chat]', e.message);
@@ -580,7 +581,8 @@ async function fetchDirect(id) {
     var res = await fetch(W, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({question:'__direct__' + id}) });
     var data = await res.json();
     if (lr._stop) lr._stop(); lr.remove();
-    if (data.faq) { CACHE[data.faq.id] = data.faq; renderFaq(data.faq); }
+    if (data.faq && Array.isArray(data.faq) && data.faq[0]) { CACHE[data.faq[0].id] = data.faq[0]; renderFaq(data.faq[0]); }
+    else if (data.faq && data.faq.id) { CACHE[data.faq.id] = data.faq; renderFaq(data.faq); }
   } catch(e) {
     console.debug('[fetchDirect]', e.message);
     if (lr._stop) lr._stop(); lr.remove();
@@ -599,27 +601,39 @@ function renderFaq(faq) {
 }
 
 function renderResult(data, q) {
-  var staff = data.staff, faq = data.faq;
-  // 직접 질문: Gemini가 생성한 comment 사용
-  // 꼬리물기: FAQ_COMMENT 미리 세팅값 사용 (renderFaq에서 처리)
+  var staff = data.staff;
+  var faqs = Array.isArray(data.faq) ? data.faq : (data.faq ? [data.faq] : []);
   var empathy = data.comment || '안내드릴게요! 😊';
 
-  if (!staff && !faq) {
-    // 매칭 안 됨 → comment 타이핑 후 안내실 카드
-    addAIResult(empathy,
+  // helpdesk 모드 (매칭 실패 또는 블랙리스트)
+  if (data.helpdesk) {
+    var msg = data.message || '안내실에서 도움드릴 수 있어요!';
+    var info = data.helpdeskInfo || { tel: '02-721-0700', location: '1층 현관 안내데스크' };
+    addAIResult(msg,
       '<div class="fback"><div style="font-size:.82em;color:var(--muted)">안내실로 문의해 주세요</div>'
-      + '<div class="fbacktel">02-721-0729</div><div class="fbacksub">평일 09:00 – 18:00</div></div>', null);
+      + '<div class="fbacktel">' + esc(info.tel) + '</div>'
+      + '<div class="fbacksub">' + esc(info.location) + '</div></div>', null);
     return;
   }
+
+  if (faqs.length === 0 && !staff) {
+    addAIResult(empathy,
+      '<div class="fback"><div style="font-size:.82em;color:var(--muted)">안내실로 문의해 주세요</div>'
+      + '<div class="fbacktel">02-721-0700</div><div class="fbacksub">1층 현관 안내데스크</div></div>', null);
+    return;
+  }
+
   var cards = '';
-  if (faq) {
+  // FAQ 카드 (여러 개 가능)
+  faqs.forEach(function(faq) {
     var lb = faq.link ? '<a class="flink" href="' + esc(faq.link) + '" target="_blank">🔗 홈페이지에서 자세히 보기</a>' : '';
     cards += '<div class="fcard"><div class="fbar"></div><div class="fbody">'
       + '<div class="flbl">📚 관련 안내</div>'
       + '<div class="ftitle">' + esc(faq.title) + '</div>'
       + '<div class="fsum">' + esc(faq.summary) + '</div>'
       + lb + '</div></div>';
-  }
+  });
+  // Staff 카드
   if (staff) {
     var duties = (staff.duties||[]).slice(0,3).map(function(d){return '<span style="display:inline-block;background:#f0f4ff;color:#3b6cb4;padding:2px 8px;border-radius:6px;font-size:.75em;font-weight:600;margin:1px">'+esc(d)+'</span>'}).join(' ');
     cards += '<div class="scard"><div class="sbar"></div><div class="sbody">'
@@ -631,7 +645,7 @@ function renderResult(data, q) {
       + '</div><div class="stel"><span style="font-size:.8em;margin-right:3px">☎</span>'
       + '<span class="stelnum">02-' + esc(staff.tel) + '</span></div></div></div>';
   }
-  addAIResult(empathy, cards, faq ? faq.id : null);
+  addAIResult(empathy, cards, faqs.length > 0 ? faqs[0].id : null);
 }
 
 // ── 만족도 조사 ──
