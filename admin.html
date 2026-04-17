@@ -405,7 +405,6 @@ function openFaqModal(id) {
     +'<div class="form-group"><label>요약 설명 <span style="color:var(--muted);font-weight:400">- 친근한 말투, 구체적 정보 포함</span></label><textarea id="mFaqSummary" placeholder="예: 지하 1층 인왕관 옆에 북카페가 있어요! 음료를 마시며 편하게 책을 읽을 수 있는 공간이에요.">'+(faq?esc(faq.summary):'')+'</textarea></div>'
     +'<div class="form-group"><label>링크 URL <span style="color:var(--muted);font-weight:400">- 종로도서관 홈페이지 관련 페이지 주소</span></label><input id="mFaqLink" value="'+esc(faq?faq.link||'':'')+'" placeholder="https://jnlib.sen.go.kr/..."></div>'
     +'<div class="form-group"><label>공감 한마디 <span style="color:var(--muted);font-weight:400">- 20자 이내, 따뜻한 톤 + 이모지</span></label><input id="mFaqComment" value="'+esc(comment)+'" placeholder="예: 커피 한잔과 함께 독서 어때요? ☕"></div>'
-    +'<div class="form-group"><label>보조 키워드 <span style="color:var(--muted);font-weight:400">- 참고용 (LLM 매칭에는 제목+설명이 사용됩니다)</span></label><input id="mFaqEmbedText" value="'+esc(faq?faq.embedText||'':'')+'" placeholder="예: 카페 어디 있어요, 도서관에서 커피 마실 수 있나요, 쉴 곳이 있나요"></div>'
     +'<div class="form-group"><label>꼬리질문 (연관 FAQ, 최대 3개)</label>'
     +'<select id="mRelSelect"><option value="">-- 선택 --</option>'+relOpts+'</select>'
     +'<button class="btn btn-outline" style="margin-top:6px" onclick="addRel()">추가</button>'
@@ -447,7 +446,6 @@ function saveFaq() {
     title: document.getElementById('mFaqTitle').value.trim(),
     summary: document.getElementById('mFaqSummary').value.trim(),
     link: document.getElementById('mFaqLink').value.trim() || null,
-    embedText: document.getElementById('mFaqEmbedText').value.trim(),
   };
   var comment = document.getElementById('mFaqComment').value.trim();
   var rels = document.getElementById('mRels').value.split(',').filter(Boolean);
@@ -591,10 +589,10 @@ function csvEsc(val) {
 }
 
 function downloadFaqCsv() {
-  var header = 'id,제목,요약설명,링크,공감한마디,임베딩보조텍스트,꼬리질문1,꼬리질문2,꼬리질문3';
+  var header = 'id,제목,요약설명,링크,공감한마디,꼬리질문1,꼬리질문2,꼬리질문3';
   var rows = FAQS.map(function(f) {
     var rels = RELATIONS[f.id] || [];
-    return [f.id, f.title, f.summary, f.link||'', COMMENTS[f.id]||'', f.embedText||'', rels[0]||'', rels[1]||'', rels[2]||''].map(csvEsc).join(',');
+    return [f.id, f.title, f.summary, f.link||'', COMMENTS[f.id]||'', rels[0]||'', rels[1]||'', rels[2]||''].map(csvEsc).join(',');
   });
   var csv = '\uFEFF' + header + '\n' + rows.join('\n');
   downloadFile(csv, 'faq_data.csv', 'text/csv;charset=utf-8');
@@ -682,16 +680,15 @@ function uploadFaqBatch(data, idx, total) {
     return;
   }
   var row = data[idx];
-  // id,제목,요약설명,링크,공감한마디,임베딩보조텍스트,꼬리질문1,꼬리질문2,꼬리질문3
+  // id,제목,요약설명,링크,공감한마디,꼬리질문1,꼬리질문2,꼬리질문3
   var faq = {
     id: (row[0]||'').trim(),
     title: (row[1]||'').trim(),
     summary: (row[2]||'').trim(),
     link: (row[3]||'').trim() || null,
-    embedText: (row[5]||'').trim(),
   };
   var comment = (row[4]||'').trim();
-  var rels = [row[6],row[7],row[8]].map(function(r){return (r||'').trim();}).filter(Boolean);
+  var rels = [row[5],row[6],row[7]].map(function(r){return (r||'').trim();}).filter(Boolean);
 
   if (!faq.id || !faq.title) {
     updateUploadProgress(idx+1, data.length, faq.id + ' 건너뜀 (ID/제목 없음)');
