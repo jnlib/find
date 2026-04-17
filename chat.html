@@ -50,6 +50,9 @@ body{font-family:'Noto Sans KR',sans-serif;background:linear-gradient(160deg,#ee
 .srole{font-size:.72em;color:var(--muted);margin-top:2px}
 .stel{display:flex;align-items:center;gap:6px;background:#f4f8ff;border-radius:8px;padding:8px 12px;margin-left:auto;flex-shrink:0;border:1px solid rgba(0,207,192,.12)}
 .stelnum{font-size:.95em;font-weight:900;color:var(--navy);letter-spacing:.04em}
+.chip-wrap{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.chip{display:inline-block;background:rgba(0,207,192,.1);color:var(--teal2);border:1.5px solid rgba(0,207,192,.25);border-radius:20px;padding:8px 16px;font-size:.85em;font-weight:600;cursor:pointer;transition:.15s}
+.chip:active{background:rgba(0,207,192,.25);transform:scale(.96)}
 .fback{background:#fff8f0;border:1.5px solid rgba(245,160,0,.2);border-radius:12px;padding:15px 17px;margin-top:10px;text-align:center}
 .fbacktel{font-size:1.3em;font-weight:900;color:var(--navy);letter-spacing:.06em;margin-top:4px}
 .fbacksub{font-size:.72em;color:var(--muted);margin-top:3px}
@@ -605,6 +608,16 @@ function renderResult(data, q) {
   var faqs = Array.isArray(data.faq) ? data.faq : (data.faq ? [data.faq] : []);
   var empathy = data.comment || '안내드릴게요! 😊';
 
+  // 짧은 입력 → 인기 FAQ 추천 칩
+  if (data.tooShort && data.suggestions) {
+    var chips = (data.suggestions || []).map(function(s) {
+      return '<span class="chip" onclick="fetchDirect(\'' + s.id + '\')">' + esc(s.title) + '</span>';
+    }).join('');
+    addAIResult(data.message || '조금 더 자세히 물어봐주세요!',
+      '<div class="chip-wrap">' + chips + '</div>', null);
+    return;
+  }
+
   // helpdesk 모드 (매칭 실패 또는 블랙리스트)
   if (data.helpdesk) {
     var msg = data.message || '안내실에서 도움드릴 수 있어요!';
@@ -756,6 +769,119 @@ send = function() {
 function esc(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
+// ══════════════════════════════════
+// 키오스크 모드
+// ══════════════════════════════════
+var IS_KIOSK = new URLSearchParams(location.search).has('kiosk');
+
+(function kioskMode() {
+  if (!IS_KIOSK) return; // 일반 모드면 키오스크 기능 전부 OFF
+
+  // ── 1) 외부 링크 → iframe 모달로 열기 (화면 이탈 방지) ──
+  var iframeModal = document.createElement('div');
+  iframeModal.id = 'iframeModal';
+  iframeModal.innerHTML =
+    '<div id="iframeTop">'
+    + '<span id="iframeTitle">홈페이지</span>'
+    + '<button id="iframeClose" onclick="closeIframe()">✕ 닫기</button>'
+    + '</div>'
+    + '<iframe id="iframeContent" src="about:blank"></iframe>';
+  document.body.appendChild(iframeModal);
+
+  var iStyle = document.createElement('style');
+  iStyle.textContent =
+    '#iframeModal{display:none;position:fixed;inset:0;z-index:9999;background:#fff;flex-direction:column}'
+    + '#iframeModal.open{display:flex}'
+    + '#iframeTop{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:var(--navy);color:#fff;flex-shrink:0}'
+    + '#iframeTitle{font-size:.9em;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}'
+    + '#iframeClose{background:var(--teal);color:#fff;border:none;border-radius:8px;padding:8px 20px;font-size:.9em;font-weight:700;cursor:pointer;flex-shrink:0;margin-left:12px}'
+    + '#iframeContent{flex:1;border:none;width:100%}'
+    + '#idleOverlay{display:none;position:fixed;inset:0;z-index:10000;background:rgba(7,33,58,.85);flex-direction:column;align-items:center;justify-content:center;color:#fff;text-align:center}'
+    + '#idleOverlay.show{display:flex}'
+    + '#idleCount{font-size:4em;font-weight:900;color:var(--teal);margin:16px 0}'
+    + '#idleMsg{font-size:1.1em;line-height:1.6}'
+    + '#idleTouch{margin-top:24px;font-size:.85em;color:rgba(255,255,255,.6)}';
+  document.head.appendChild(iStyle);
+
+  window.openIframe = function(url) {
+    document.getElementById('iframeTitle').textContent = url.replace(/https?:\/\//, '').split('/')[0];
+    document.getElementById('iframeContent').src = url;
+    iframeModal.classList.add('open');
+    resetIdle();
+  };
+  window.closeIframe = function() {
+    iframeModal.classList.remove('open');
+    document.getElementById('iframeContent').src = 'about:blank';
+    resetIdle();
+  };
+
+  document.addEventListener('click', function(e) {
+    var a = e.target.closest('a[href]');
+    if (!a) return;
+    var href = a.getAttribute('href');
+    if (!href || href.startsWith('#') || href.startsWith('javascript')) return;
+    e.preventDefault();
+    openIframe(href);
+  });
+
+  // ── 2) 무활동 감지 → 카운트다운 → 자동 초기화 ──
+  var IDLE_TIMEOUT = 10000;  // 10초 무활동 → 카운트다운 시작
+  var COUNTDOWN_SEC = 5;     // 5초 카운트다운
+  var idleTimer = null;
+  var countdownTimer = null;
+  var countdownActive = false;
+
+  // 카운트다운 오버레이
+  var overlay = document.createElement('div');
+  overlay.id = 'idleOverlay';
+  overlay.innerHTML =
+    '<div id="idleMsg">잠시 후 처음으로 돌아갑니다</div>'
+    + '<div id="idleCount">' + COUNTDOWN_SEC + '</div>'
+    + '<div id="idleTouch">화면을 터치하면 계속 이용할 수 있어요</div>';
+  document.body.appendChild(overlay);
+
+  function startCountdown() {
+    if (countdownActive) return;
+    countdownActive = true;
+    var sec = COUNTDOWN_SEC;
+    overlay.classList.add('show');
+    document.getElementById('idleCount').textContent = sec;
+
+    countdownTimer = setInterval(function() {
+      sec--;
+      document.getElementById('idleCount').textContent = sec;
+      if (sec <= 0) {
+        clearInterval(countdownTimer);
+        location.reload();
+      }
+    }, 1000);
+  }
+
+  function cancelCountdown() {
+    if (!countdownActive) return;
+    countdownActive = false;
+    overlay.classList.remove('show');
+    if (countdownTimer) clearInterval(countdownTimer);
+  }
+
+  function resetIdle() {
+    cancelCountdown();
+    if (idleTimer) clearTimeout(idleTimer);
+    idleTimer = setTimeout(startCountdown, IDLE_TIMEOUT);
+  }
+
+  ['click','touchstart','keydown','scroll','mousemove'].forEach(function(evt) {
+    document.addEventListener(evt, resetIdle, { passive: true });
+  });
+  resetIdle();
+
+  // ── 3) 뒤로가기 방지 ──
+  history.pushState(null, '', location.href);
+  window.addEventListener('popstate', function() {
+    history.pushState(null, '', location.href);
+  });
+})();
 </script>
 </body>
 </html>

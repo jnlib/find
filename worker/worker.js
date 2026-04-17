@@ -18,43 +18,56 @@ function jsonRes(data, status) {
   });
 }
 
-// ── 속도 제한 (IP당 시간당 최대 요청 수) ──
-const RATE_LIMIT = 300; // IP당 시간당 300회
-const RATE_WINDOW = 3600; // 1시간(초)
+// ── 속도 제한 (키오스크 환경: IP당 + 연속 요청 쿨다운) ──
+const RATE_LIMIT = 120;    // IP당 시간당 120회
+const RATE_WINDOW = 3600;  // 1시간(초)
+const COOLDOWN_MS = 2000;  // 같은 IP에서 2초 이내 재요청 차단
 
 async function checkRateLimit(env, ip) {
   const key = 'rate:' + ip;
   const current = await env.FINDJNLIB_KV.get(key, 'json');
   const now = Math.floor(Date.now() / 1000);
+  const nowMs = Date.now();
+
   if (!current || now - current.ts > RATE_WINDOW) {
-    await env.FINDJNLIB_KV.put(key, JSON.stringify({ count: 1, ts: now }), { expirationTtl: RATE_WINDOW });
+    await env.FINDJNLIB_KV.put(key, JSON.stringify({ count: 1, ts: now, lastMs: nowMs }), { expirationTtl: RATE_WINDOW });
     return true;
   }
+  // 연속 요청 쿨다운 (스크립트 공격 방지)
+  if (current.lastMs && nowMs - current.lastMs < COOLDOWN_MS) return false;
   if (current.count >= RATE_LIMIT) return false;
-  await env.FINDJNLIB_KV.put(key, JSON.stringify({ count: current.count + 1, ts: current.ts }), { expirationTtl: RATE_WINDOW });
+  await env.FINDJNLIB_KV.put(key, JSON.stringify({ count: current.count + 1, ts: current.ts, lastMs: nowMs }), { expirationTtl: RATE_WINDOW });
   return true;
 }
 
-// ── 블랙리스트 (잡담/무의미 입력 차단) ──
+// ── 입력 검증 ──
+const MAX_QUESTION_LENGTH = 200; // 최대 200자
+
+// ── 블랙리스트 (잡담/무의미/인젝션 차단) ──
 const BLACKLIST_PATTERNS = [
   /^[\s]*$/,
-  /^[ㄱ-ㅎㅏ-ㅣ]{1,5}$/,               // 자음/모음만 (ㅋㅋ, ㅎㅇ, ㅁㄴㅇㄹ)
+  /^[ㄱ-ㅎㅏ-ㅣ]{1,5}$/,               // 자음/모음만
   /^[a-zA-Z]{1,4}$/,                    // asdf, test 등
   /^\d{1,3}$/,                           // 숫자만
-  /^[.!?~,ㅋㅎㅠㅜ\s]+$/,               // 특수문자/이모티콘만
+  /^[.!?~,ㅋㅎㅠㅜ\s]+$/,               // 특수문자만
   /^(안녕|하이|헬로|hi|hello|hey)[\s!?.]*$/i,
   /^(테스트|test|ㅌㅅㅌ)[\s!?.]*$/i,
-  /^(ㅗ|ㅅㅂ|ㅆㅂ|시발|씨발|개새|병신)/,  // 욕설
+  /^(ㅗ|ㅅㅂ|ㅆㅂ|시발|씨발|개새|병신|지랄|미친)/,  // 욕설
+  /(.)\1{4,}/,                           // 같은 글자 5번 이상 반복 (아아아아아)
 ];
 
 const BLACKLIST_KEYWORDS = [
   '날씨','맛집','몇살','나이','이름이 뭐','너 누구','뭐해','심심',
   '사랑해','좋아해','배고파','졸려','게임','노래','영화 추천',
+  // 프롬프트 인젝션 차단
+  '프롬프트','시스템 프롬프트','prompt','system prompt','ignore','무시하고',
+  '역할을 바꿔','너는 이제부터','모든 질문에','jailbreak','DAN',
 ];
 
 function isBlacklisted(text) {
   const t = text.trim();
   if (t.length === 0) return true;
+  if (t.length > MAX_QUESTION_LENGTH) return true; // 과도하게 긴 입력 차단
   for (const p of BLACKLIST_PATTERNS) {
     if (p.test(t)) return true;
   }
@@ -63,6 +76,12 @@ function isBlacklisted(text) {
     if (tLower.includes(kw)) return true;
   }
   return false;
+}
+
+// ── 짧은 입력 (1~2글자) → 인기 FAQ 제시 ──
+function isTooShort(text) {
+  const t = text.trim().replace(/[?.!~\s]/g, '');
+  return t.length <= 2;
 }
 
 // ── 띄어쓰기 교정 (붙여쓰기 감지 시 LLM 1회 추가 호출) ──
@@ -443,12 +462,29 @@ async function handleSearch(request, env) {
     });
   }
 
-  // 블랙리스트 체크 (잡담/무의미 → LLM 호출 안 함)
+  // 블랙리스트 체크 (잡담/무의미/인젝션 → LLM 호출 안 함)
   if (isBlacklisted(question)) {
     return jsonRes({
       faq: null, staff: null, comment: null, relations: [],
       helpdesk: true,
       message: '도서관 이용에 관해 물어봐주세요! 😊'
+    });
+  }
+
+  // 짧은 입력 (1~2글자) → 인기 FAQ 추천
+  if (isTooShort(question)) {
+    return jsonRes({
+      faq: null, staff: null, comment: null, relations: [],
+      helpdesk: false,
+      tooShort: true,
+      message: '조금 더 자세히 물어봐주세요! 😊 예를 들면:',
+      suggestions: [
+        { id: 'q056', title: '운영시간·휴관일' },
+        { id: 'q059', title: '대출·반납·연장' },
+        { id: 'q057', title: '회원가입·회원증' },
+        { id: 'q058', title: '층별 시설 안내' },
+        { id: 'q065', title: '오시는 길·교통' },
+      ]
     });
   }
 
